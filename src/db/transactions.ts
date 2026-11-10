@@ -1,5 +1,5 @@
 import { isIncomeKind } from '../domain/income'
-import type { PayCycle, Transaction } from '../domain/types'
+import type { PayCycle, PaymentMethod, Transaction } from '../domain/types'
 import type { ISODate } from '../lib/date'
 import { formatPaise, type Paise } from '../lib/money'
 import { db as defaultDb, newId, type TrackerDB } from './db'
@@ -31,6 +31,8 @@ export interface ExpenseInput {
   categoryId: string
   date: ISODate
   note?: string
+  /** PRD #25: optional; null clears it on edit. */
+  paymentMethod?: PaymentMethod | null
 }
 
 /** FR-2.1 */
@@ -61,6 +63,7 @@ async function addEntry(type: 'expense' | 'income', input: ExpenseInput, today: 
       categoryId: input.categoryId,
       date: input.date,
       ...(note ? { note } : {}),
+      ...(input.paymentMethod ? { paymentMethod: input.paymentMethod } : {}),
       createdAt: now,
       updatedAt: now,
     }
@@ -100,6 +103,7 @@ export async function updateTransaction(
     if (patch.amount !== undefined) changes.amount = patch.amount
     if (patch.categoryId !== undefined) changes.categoryId = patch.categoryId
     if (patch.note !== undefined) changes.note = patch.note.trim() || undefined
+    if (patch.paymentMethod !== undefined) changes.paymentMethod = patch.paymentMethod ?? undefined
     if (patch.date !== undefined && patch.date !== existing.date) {
       const cycle = await resolveCycle(patch.date, today, database)
       changes.date = patch.date
@@ -132,6 +136,14 @@ export async function deleteTransaction(id: string, database: TrackerDB = defaul
 /** Undo for deleteTransaction: put the original row(s) back exactly as they were. */
 export async function restoreTransaction(rows: Transaction | Transaction[], database: TrackerDB = defaultDb): Promise<void> {
   await database.transactions.bulkPut(Array.isArray(rows) ? rows : [rows])
+}
+
+/** Quick-add also pre-selects the payment method of the most recently added expense (if it had one). */
+export async function lastUsedPaymentMethod(database: TrackerDB = defaultDb): Promise<PaymentMethod | undefined> {
+  const all = await database.transactions.where('type').equals('expense').toArray()
+  let latest: Transaction | undefined
+  for (const t of all) if (!latest || t.createdAt > latest.createdAt) latest = t
+  return latest?.paymentMethod
 }
 
 /** Feature 4: quick-add pre-selects the category of the most recently added expense. */

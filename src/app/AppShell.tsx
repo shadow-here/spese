@@ -18,7 +18,7 @@ interface AppShellProps {
 export function AppShell({ route, onNavigate, onAdd, title, children }: AppShellProps) {
   return (
     <div className="flex min-h-full">
-      <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r border-border bg-surface md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r border-border bg-surface md:flex print:hidden">
         <div className="flex h-12 items-center px-4 text-body font-semibold tracking-[-0.01em]">Spese</div>
         <div className="px-3 pb-3">
           <button
@@ -56,15 +56,15 @@ export function AppShell({ route, onNavigate, onAdd, title, children }: AppShell
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-12 items-center border-b border-border bg-bg/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-8">
+        <header className="sticky top-0 z-10 flex h-12 items-center border-b border-border bg-bg/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-8 print:hidden">
           <h1 className="text-title">{title}</h1>
         </header>
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-4 pb-28 md:px-8 md:py-6 md:pb-8">{children}</main>
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-4 pb-28 md:px-8 md:py-6 md:pb-8 print:max-w-none print:p-0">{children}</main>
       </div>
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
       >
         <ul className="grid h-14 grid-cols-5 items-center">
           {NAV.slice(0, 2).map((item) => (

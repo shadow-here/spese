@@ -124,6 +124,30 @@
   animation: fade-in 150ms var(--ease-out);
 }
 
+/* Printing (the cycle report's "Save as PDF"): paper is white, so flip the tokens to dark ink
+   on white. App chrome is hidden with print:hidden on the shell. */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-hover: #f4f4f5;
+    --border: rgba(0, 0, 0, 0.14);
+    --text-primary: #111111;
+    --text-secondary: #4b4f56;
+    --text-tertiary: #6b6f76;
+    color-scheme: light;
+  }
+  body {
+    background: #ffffff;
+  }
+  @page {
+    margin: 14mm;
+  }
+  .report tr {
+    break-inside: avoid;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -10,12 +10,14 @@ import {
   allowedDateRange,
   deleteTransaction,
   lastUsedCategoryId,
+  lastUsedPaymentMethod,
   restoreTransaction,
   updateTransaction,
 } from '../../db/transactions'
 import { FALLBACK_CATEGORY_ID } from '../../domain/categories'
 import { DEFAULT_INCOME_KIND, INCOME_KINDS } from '../../domain/income'
-import type { Transaction } from '../../domain/types'
+import { PAYMENT_METHODS } from '../../domain/payment'
+import type { PaymentMethod, Transaction } from '../../domain/types'
 import type { ISODate } from '../../lib/date'
 import { formatPaise, paiseToInput, parseRupees } from '../../lib/money'
 import { budgetUse } from '../../db/budgets'
@@ -73,6 +75,8 @@ function ExpenseForm({
   const [incomeKindId, setIncomeKindId] = useState(editing?.type === 'income' ? editing.categoryId : DEFAULT_INCOME_KIND)
   const [date, setDate] = useState<ISODate>(editing?.date ?? today)
   const [note, setNote] = useState(editing?.note ?? '')
+  // undefined = not loaded yet (new entry); null = none chosen.
+  const [method, setMethod] = useState<PaymentMethod | null | undefined>(editing ? (editing.paymentMethod ?? null) : undefined)
   const [amountError, setAmountError] = useState<string>()
   const [formError, setFormError] = useState<string>()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -89,6 +93,10 @@ function ExpenseForm({
     void lastUsedCategoryId().then((id) => {
       if (!cancelled) setCategoryId((current) => current ?? id ?? 'food')
     })
+    // …and the last-used payment method, if the last expense had one.
+    void lastUsedPaymentMethod().then((m) => {
+      if (!cancelled) setMethod((current) => (current === undefined ? (m ?? null) : current))
+    })
     return () => {
       cancelled = true
     }
@@ -103,7 +111,14 @@ function ExpenseForm({
     }
     setSaving(true)
     try {
-      const input = { amount, categoryId: isIncome ? incomeKindId : (categoryId ?? FALLBACK_CATEGORY_ID), date, note }
+      const input = {
+        amount,
+        categoryId: isIncome ? incomeKindId : (categoryId ?? FALLBACK_CATEGORY_ID),
+        date,
+        note,
+        // Payment method is for spending only.
+        ...(isIncome ? {} : { paymentMethod: method ?? null }),
+      }
       // FR-5.2: note the budget before saving, so we can tell if this entry crossed 80% / 100%.
       const spending = !isIncome && editing?.type !== 'income'
       const before = spending ? await budgetUse(input.categoryId, date, today) : undefined
@@ -230,6 +245,17 @@ function ExpenseForm({
         onChange={(e) => setNote(e.target.value)}
         maxLength={140}
       />
+
+      {!isIncome && editing?.type !== 'income' && (
+        <div className="flex items-center gap-2" role="group" aria-label="Paid with">
+          <span className="text-label text-text-secondary">Paid with</span>
+          {PAYMENT_METHODS.map((m) => (
+            <Chip key={m.id} selected={method === m.id} onClick={() => setMethod(method === m.id ? null : m.id)} className="h-7">
+              {m.name}
+            </Chip>
+          ))}
+        </div>
+      )}
 
       {formError && (
         <p role="alert" className="text-label text-negative">

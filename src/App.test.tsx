@@ -192,6 +192,68 @@ describe('expenses', () => {
     expect(tile).toHaveTextContent(/goal kept/)
   })
 
+  it('tags a payment method, remembers it, and shows it on the row', async () => {
+    render(<App />)
+    await screen.findByText('₹50,000.00')
+    fireEvent.keyDown(document, { key: 'n' })
+    let dialog = await screen.findByRole('dialog', { name: 'New expense' })
+    fireEvent.change(within(dialog).getByLabelText('Amount'), { target: { value: '240' } })
+    fireEvent.click(within(within(dialog).getByRole('group', { name: 'Paid with' })).getByRole('button', { name: 'UPI' }))
+    fireEvent.submit(within(dialog).getByLabelText('Amount').closest('form')!)
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect((await db.transactions.toArray())[0]!.paymentMethod).toBe('upi')
+    expect(await screen.findByText(/UPI/)).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'n' })
+    dialog = await screen.findByRole('dialog', { name: 'New expense' })
+    const upi = within(within(dialog).getByRole('group', { name: 'Paid with' })).getByRole('button', { name: 'UPI' })
+    await waitFor(() => expect(upi).toHaveAttribute('aria-pressed', 'true'))
+  })
+
+  it('searches and filters transactions; / jumps to search', async () => {
+    const t = todayISO()
+    const { addExpense } = await import('./db/transactions')
+    await addExpense({ amount: 180000, categoryId: 'food', date: t, note: 'Dinner at Toit', paymentMethod: 'card' }, t, db)
+    await addExpense({ amount: 24000, categoryId: 'transport', date: t, note: 'Uber', paymentMethod: 'upi' }, t, db)
+    render(<App />)
+    await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
+
+    fireEvent.keyDown(document, { key: '/' })
+    const search = await screen.findByRole('searchbox', { name: 'Search transactions' })
+    await waitFor(() => expect(search).toHaveFocus())
+
+    fireEvent.change(search, { target: { value: 'toit' } })
+    expect((await screen.findByText(/1 result/)).textContent).toBe('1 result · ₹1,800 spent')
+    expect(screen.queryByText('Uber')).not.toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Paid with' }), { target: { value: 'upi' } })
+    expect(await screen.findByText('Uber')).toBeInTheDocument()
+    expect(screen.queryByText('Dinner at Toit')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(await screen.findByText('Dinner at Toit')).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: 'nothing like this' } })
+    expect(await screen.findByText('Nothing matches')).toBeInTheDocument()
+  })
+
+  it('opens a printable report for the cycle', async () => {
+    const t = todayISO()
+    const { addExpense } = await import('./db/transactions')
+    await addExpense({ amount: 24000, categoryId: 'food', date: t, note: 'Lunch' }, t, db)
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /Report/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Cycle report' })).toBeInTheDocument()
+    const summary = (await screen.findByRole('heading', { name: 'Summary' })).closest('section')!
+    expect(summary).toHaveTextContent('Remaining₹49,760')
+    expect(screen.getByRole('heading', { name: 'Transactions (1)' })).toBeInTheDocument()
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Save as PDF' }))
+    expect(print).toHaveBeenCalled()
+  })
+
   it('requires an amount', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })

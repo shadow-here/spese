@@ -17,14 +17,16 @@ import { FixedPage } from './pages/Fixed'
 import { OnboardingPage } from './pages/Onboarding'
 import { DashboardPage } from './pages/Dashboard'
 import { SettingsPage } from './pages/Settings'
-import { TransactionsPage } from './pages/Transactions'
+import { focusTransactionSearch, TransactionsPage } from './pages/Transactions'
 import { UiKitPage } from './pages/UiKit'
+import { ReportPage } from './pages/Report'
 
 const TITLES: Record<RouteId, string> = {
   dashboard: 'Dashboard',
   transactions: 'Transactions',
   fixed: 'Fixed expenses',
   settings: 'Settings',
+  report: 'Cycle report',
   ui: 'UI kit',
 }
 
@@ -68,7 +70,7 @@ function Boot() {
 type SheetState = { open: false } | { open: true; editing?: Transaction }
 
 function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
-  const [route, navigate] = useRoute()
+  const [route, navigate, routeParam] = useRoute()
   const [sheet, setSheet] = useState<SheetState>({ open: false })
   const openAdd = useCallback(() => setSheet({ open: true }), [])
   const openEdit = useCallback((tx: Transaction) => setSheet({ open: true, editing: tx }), [])
@@ -77,6 +79,15 @@ function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
   const cycle = useLiveQuery(() => db.cycles.get(cycleId), [cycleId])
 
   useHotkey('n', openAdd, !sheet.open && !fixedSheet.open)
+  // "/" = search (Design system keyboard map): jump to Transactions and focus the search box.
+  useHotkey(
+    '/',
+    () => {
+      if (route !== 'transactions') navigate('transactions')
+      focusTransactionSearch()
+    },
+    !sheet.open && !fixedSheet.open,
+  )
 
   return (
     <>
@@ -89,6 +100,7 @@ function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
             onAdd={openAdd}
             onEdit={openEdit}
             onViewAll={() => navigate('transactions')}
+            onReport={(id) => navigate('report', id)}
           />
         )}
         {route === 'transactions' && <TransactionsPage today={today} onAdd={openAdd} onEdit={openEdit} />}
@@ -100,6 +112,7 @@ function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
           />
         )}
         {route === 'settings' && <SettingsPage today={today} />}
+        {route === 'report' && <ReportPage cycleId={routeParam} today={today} onBack={() => navigate('dashboard')} />}
         {route === 'ui' && <UiKitPage />}
       </AppShell>
 

@@ -1,6 +1,7 @@
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { ListRow, Tag } from '../../components/ui'
 import { incomeKind } from '../../domain/income'
+import { paymentMethodName } from '../../domain/payment'
 import { netAmount, type RefundInfo } from '../../domain/refunds'
 import type { Category, Transaction } from '../../domain/types'
 import { formatDate } from '../../lib/format'
@@ -28,7 +29,9 @@ export function TransactionRow({
   const categoryName = kind?.name ?? category?.name ?? 'Other'
   const icon = kind?.icon ?? category?.icon
   const title = tx.note || categoryName
-  const subtitle = [tx.note ? categoryName : null, showDate ? formatDate(tx.date) : null].filter(Boolean).join(' · ')
+  const subtitle = [tx.note ? categoryName : null, paymentMethodName(tx.paymentMethod), showDate ? formatDate(tx.date) : null]
+    .filter(Boolean)
+    .join(' · ')
   return (
     <ListRow
       onClick={onClick}

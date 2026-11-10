@@ -17,7 +17,8 @@ import { useExportBackup } from '../features/backup/useBackup'
 import { addDays, maxDate, minDate, todayISO, type ISODate } from '../lib/date'
 import { formatDate, formatRange, ordinal } from '../lib/format'
 import { paiseToInput, parseRupees } from '../lib/money'
-import { requestPersistentStorage, useInstall } from '../lib/platform'
+import { requestPersistentStorage, saveTextFile, useInstall } from '../lib/platform'
+import { csvFileName, exportTransactionsCsv } from '../db/exportCsv'
 
 /** Settings (Key screen 5): salary, pay date, categories, backup/restore, install, delete all (FR-6.1/6.2). */
 export function SettingsPage({ today }: { today: ISODate }) {
@@ -267,6 +268,21 @@ function IconButton({ label, disabled, onClick, children }: { label: string; dis
   )
 }
 
+/** PRD #26: every transaction as a spreadsheet. Not a backup — it can't be restored. */
+function ExportCsvButton() {
+  const toast = useToast()
+  async function run() {
+    try {
+      const result = await saveTextFile(csvFileName(), await exportTransactionsCsv(), 'text/csv')
+      if (result !== 'cancelled') toast.show('CSV saved')
+    } catch (err) {
+      console.error(err)
+      toast.show('Export failed — try again')
+    }
+  }
+  return <Button onClick={() => void run()}>Export CSV</Button>
+}
+
 function BackupCard({ lastBackupAt }: { lastBackupAt?: number }) {
   const exportBackup = useExportBackup()
   const last = lastBackupAt ? new Date(lastBackupAt) : undefined
@@ -281,12 +297,14 @@ function BackupCard({ lastBackupAt }: { lastBackupAt?: number }) {
           ) : (
             'No backup yet.'
           )}{' '}
-          Deleting the app from your home screen deletes its data — keep a backup file somewhere safe.
+          Deleting the app from your home screen deletes its data — keep a backup file somewhere safe. The CSV is for spreadsheets;
+          only a backup can be restored.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="primary" onClick={() => void exportBackup()}>
             Export backup
           </Button>
+          <ExportCsvButton />
           {/* Reload so startup re-runs on the restored data. */}
           <RestoreFromFile replacing onRestored={() => window.location.reload()} />
         </div>

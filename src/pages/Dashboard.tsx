@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { LayoutDashboard } from 'lucide-react'
+import { FileText, LayoutDashboard } from 'lucide-react'
 import { EmptyState } from '../app/EmptyState'
 import { Button, Card, Select } from '../components/ui'
 import { db } from '../db/db'
@@ -52,12 +52,15 @@ export function DashboardPage({
   onAdd,
   onEdit,
   onViewAll,
+  onReport,
 }: {
   currentCycle: PayCycle
   today: ISODate
   onAdd: () => void
   onEdit: (tx: Transaction) => void
   onViewAll: () => void
+  /** Open the printable report for a cycle ("Save as PDF"). */
+  onReport: (cycleId: string) => void
 }) {
   const [selectedId, setSelectedId] = useState(currentCycle.id)
   const cycles = useLiveQuery(() => db.cycles.orderBy('start').reverse().toArray(), [])
@@ -111,18 +114,26 @@ export function DashboardPage({
 
   return (
     <div className="flex flex-col gap-4">
-      {cycles && cycles.length > 1 && (
-        <div className="max-w-xs">
-          <Select label="Pay cycle" value={cycle.id} onChange={(e) => setSelectedId(e.target.value)}>
-            {cycles.map((c) => (
-              <option key={c.id} value={c.id}>
-                {formatRange(c.start, c.end)}
-                {c.id === currentCycle.id ? ' (current)' : ''}
-              </option>
-            ))}
-          </Select>
-        </div>
-      )}
+      <div className="flex items-end justify-between gap-2">
+        {cycles && cycles.length > 1 ? (
+          <div className="max-w-xs flex-1">
+            <Select label="Pay cycle" value={cycle.id} onChange={(e) => setSelectedId(e.target.value)}>
+              {cycles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatRange(c.start, c.end)}
+                  {c.id === currentCycle.id ? ' (current)' : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : (
+          <span />
+        )}
+        <Button variant="ghost" size="sm" onClick={() => onReport(cycle.id)} className="h-9">
+          <FileText size={16} strokeWidth={1.5} aria-hidden="true" />
+          Report / PDF
+        </Button>
+      </div>
       {isCurrent && !cycle.salaryConfirmed && <SalaryConfirm cycle={cycle} />}
       {isCurrent && <BackupReminder />}
       <BalanceCard summary={summary} isCurrent={isCurrent} />

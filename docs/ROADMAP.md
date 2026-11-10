@@ -79,7 +79,7 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
 - Alert when remaining drops below 10% of salary.
 - Savings goal per cycle, with progress on the dashboard.
 
-## Phase 6 — Find and export (PRD #22, #25, #26)
+## Phase 6 — Find and export (PRD #22, #25, #26) — ✅ done 11 Nov 2026
 
 - **Payment method** on expenses: UPI, card, cash (optional, remembered like category).
 - **Search and filter** transactions: text, category, payment method, date range.

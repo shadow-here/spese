@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { LayoutDashboard, ListOrdered, Repeat, Settings, type LucideIcon } from 'lucide-react'
 
-export type RouteId = 'dashboard' | 'transactions' | 'fixed' | 'settings' | 'ui'
+export type RouteId = 'dashboard' | 'transactions' | 'fixed' | 'settings' | 'report' | 'ui'
 
 export interface NavItem {
-  id: Exclude<RouteId, 'ui'>
+  id: Exclude<RouteId, 'ui' | 'report'>
   label: string
   icon: LucideIcon
 }
@@ -16,23 +16,24 @@ export const NAV: NavItem[] = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-const ROUTES: RouteId[] = ['dashboard', 'transactions', 'fixed', 'settings', 'ui']
+const ROUTES: RouteId[] = ['dashboard', 'transactions', 'fixed', 'settings', 'report', 'ui']
 
-function parse(hash: string): RouteId {
-  const id = hash.replace(/^#\/?/, '') as RouteId
-  return ROUTES.includes(id) ? id : 'dashboard'
+/** "#/report/abc" → { route: 'report', param: 'abc' }. Unknown routes go to the dashboard. */
+export function parseRoute(hash: string): { route: RouteId; param?: string } {
+  const [id, param] = hash.replace(/^#\/?/, '').split('/') as [RouteId, string | undefined]
+  return ROUTES.includes(id) ? { route: id, param: param ? decodeURIComponent(param) : undefined } : { route: 'dashboard' }
 }
 
 /** Tiny hash router: works on any static host and offline, no server rewrites needed. */
-export function useRoute(): [RouteId, (id: RouteId) => void] {
-  const [route, setRoute] = useState<RouteId>(() => parse(window.location.hash))
+export function useRoute(): [RouteId, (id: RouteId, param?: string) => void, string | undefined] {
+  const [state, setState] = useState(() => parseRoute(window.location.hash))
   useEffect(() => {
-    const onChange = () => setRoute(parse(window.location.hash))
+    const onChange = () => setState(parseRoute(window.location.hash))
     window.addEventListener('hashchange', onChange)
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
-  const navigate = (id: RouteId) => {
-    window.location.hash = `/${id}`
+  const navigate = (id: RouteId, param?: string) => {
+    window.location.hash = param ? `/${id}/${encodeURIComponent(param)}` : `/${id}`
   }
-  return [route, navigate]
+  return [state.route, navigate, state.param]
 }
