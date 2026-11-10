@@ -114,6 +114,29 @@ describe('expenses', () => {
     expect(tx).toMatchObject({ amount: 24000, categoryId: 'transport', date: todayISO(), note: 'Auto rickshaw' })
   })
 
+  it('adds one-off income with the Income switch and shows it on the dashboard', async () => {
+    render(<App />)
+    await screen.findByText('₹50,000.00')
+    fireEvent.keyDown(document, { key: 'n' })
+    let dialog = await screen.findByRole('dialog', { name: 'New expense' })
+    const radio = within(dialog).getByRole('radio', { name: 'Income' })
+    radio.focus()
+    fireEvent.click(radio)
+    dialog = await screen.findByRole('dialog', { name: 'New income' })
+    const amount = within(dialog).getByLabelText('Amount')
+    await waitFor(() => expect(amount).toHaveFocus()) // focus goes back to the amount after switching
+    fireEvent.change(amount, { target: { value: '5000' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Freelance' }))
+    fireEvent.change(within(dialog).getByLabelText('Note'), { target: { value: 'Logo design' } })
+    fireEvent.submit(amount.closest('form')!)
+
+    expect(await screen.findByText('₹55,000.00')).toBeInTheDocument()
+    expect(screen.getByText(/other income/)).toHaveTextContent('Salary ₹50,000 + ₹5,000 other income')
+    expect(await screen.findByText('Logo design')).toBeInTheDocument()
+    expect(screen.getByText('+₹5,000.00')).toBeInTheDocument()
+    expect((await db.transactions.toArray())[0]).toMatchObject({ type: 'income', categoryId: 'income-freelance', amount: 500000 })
+  })
+
   it('requires an amount', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
@@ -203,6 +226,23 @@ describe('fixed expenses', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Active: Gym' }))
     expect(await screen.findByText('Paused')).toBeInTheDocument()
     expect((await db.fixedExpenses.toArray())[0]!.isPaused).toBe(true)
+  })
+
+  it('adds a monthly bonus as recurring income, kept apart from fixed costs', async () => {
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Add recurring income' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New recurring income' })
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Monthly bonus' } })
+    fireEvent.change(within(dialog).getByLabelText('Amount per month'), { target: { value: '3000' } })
+    fireEvent.change(within(dialog).getByLabelText('Arrives on'), { target: { value: '20' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+
+    const section = (await screen.findByRole('heading', { name: 'Recurring income' })).closest('section')!
+    expect(await within(section).findByText('Monthly bonus')).toBeInTheDocument()
+    expect(within(section).getByText('Next 20 Nov')).toBeInTheDocument()
+    expect(within(section).getByText('+₹3,000.00')).toBeInTheDocument()
+    expect(screen.getByText('No fixed expenses')).toBeInTheDocument() // not counted as a fixed cost
+    expect((await db.fixedExpenses.toArray())[0]).toMatchObject({ direction: 'in', categoryId: 'income-bonus' })
   })
 
   it('warns when fixed costs exceed salary', async () => {

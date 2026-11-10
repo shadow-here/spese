@@ -26,7 +26,11 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
     if (!open) return
     const opener = document.activeElement as HTMLElement | null
     const panel = panelRef.current
-    const first = panel?.querySelector<HTMLElement>('[autofocus], input, select, textarea, button:not([data-close])')
+    // Prefer the first field (e.g. the amount), even if buttons such as a type switch come before it.
+    const first =
+      panel?.querySelector<HTMLElement>('[data-autofocus]') ??
+      panel?.querySelector<HTMLElement>('input:not([type=file]), select, textarea') ??
+      panel?.querySelector<HTMLElement>('button:not([data-close])')
     ;(first ?? panel)?.focus()
 
     const onKey = (e: KeyboardEvent) => {

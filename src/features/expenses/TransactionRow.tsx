@@ -1,5 +1,6 @@
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { ListRow, Tag } from '../../components/ui'
+import { incomeKind } from '../../domain/income'
 import type { Category, Transaction } from '../../domain/types'
 import { formatDate } from '../../lib/format'
 import { formatPaise } from '../../lib/money'
@@ -16,18 +17,21 @@ export function TransactionRow({
   showDate?: boolean
   onClick?: () => void
 }) {
-  const categoryName = category?.name ?? 'Other'
-  const title = tx.note || categoryName
   const income = tx.type === 'income'
+  // Income rows carry an income kind (Bonus, Freelance…) instead of a spending category.
+  const kind = income ? incomeKind(tx.categoryId) : undefined
+  const categoryName = kind?.name ?? category?.name ?? 'Other'
+  const icon = kind?.icon ?? category?.icon
+  const title = tx.note || categoryName
   const subtitle = [tx.note ? categoryName : null, showDate ? formatDate(tx.date) : null].filter(Boolean).join(' · ')
   return (
     <ListRow
       onClick={onClick}
-      leading={<CategoryIcon icon={category?.icon} />}
+      leading={<CategoryIcon icon={icon} />}
       title={
         <span className="flex items-center gap-2">
           <span className="truncate">{title}</span>
-          {tx.type === 'auto' && <Tag>Auto</Tag>}
+          {tx.fixedExpenseId && <Tag>Auto</Tag>}
         </span>
       }
       subtitle={subtitle || undefined}

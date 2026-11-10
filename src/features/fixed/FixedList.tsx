@@ -5,7 +5,8 @@ import { useToast } from '../../components/Toast'
 import { Button, Switch, Tag } from '../../components/ui'
 import { db } from '../../db/db'
 import { pauseFixedExpense, resumeFixedExpense, unskipDeduction } from '../../db/fixedExpenses'
-import { isEnded, nextDueDate } from '../../domain/fixed'
+import { isEnded, isIncoming, nextDueDate } from '../../domain/fixed'
+import { incomeKind } from '../../domain/income'
 import type { FixedExpense, Transaction } from '../../domain/types'
 import type { ISODate } from '../../lib/date'
 import { formatDate } from '../../lib/format'
@@ -17,12 +18,12 @@ export interface FixedListData {
   cycleId: string
 }
 
-/** Live data for the fixed list, shared with onboarding. */
+/** Live data for the fixed list, shared with onboarding. `autos` = every row created from a recurring entry. */
 export function useFixedListData(): FixedListData | undefined {
   return useLiveQuery(async () => {
     const [fixed, autos, cycle] = await Promise.all([
       db.fixedExpenses.toArray(),
-      db.transactions.where('type').equals('auto').toArray(),
+      db.transactions.where('fixedExpenseId').above('').toArray(),
       db.cycles.where('status').equals('open').last(),
     ])
     return { fixed: fixed.sort((a, b) => a.deductionDay - b.deductionDay || a.name.localeCompare(b.name)), autos, cycleId: cycle?.id ?? '' }
@@ -69,7 +70,7 @@ export function FixedList({
             <FixedRow
               key={fe.id}
               fe={fe}
-              icon={catById.get(fe.categoryId)?.icon}
+              icon={isIncoming(fe) ? incomeKind(fe.categoryId).icon : catById.get(fe.categoryId)?.icon}
               today={today}
               next={nextDueDate(fe, today, handled.get(fe.id) ?? new Set())}
               skipped={skippedThisCycle.get(fe.id)}
@@ -84,7 +85,10 @@ export function FixedList({
           <div className="overflow-hidden rounded-card border border-border bg-surface">
             {ended.map((fe) => (
               <div key={fe.id} className="flex min-h-10 items-center gap-3 border-b border-border px-4 py-2 last:border-b-0">
-                <CategoryIcon icon={catById.get(fe.categoryId)?.icon} className="text-text-tertiary" />
+                <CategoryIcon
+                  icon={isIncoming(fe) ? incomeKind(fe.categoryId).icon : catById.get(fe.categoryId)?.icon}
+                  className="text-text-tertiary"
+                />
                 <span className="flex-1 truncate text-body text-text-secondary">{fe.name}</span>
                 <span className="text-label text-text-secondary">Ended {formatDate(fe.endDate!)}</span>
                 <span className="tnum text-body text-text-secondary">{formatPaise(fe.amount)}</span>
@@ -136,15 +140,19 @@ function FixedRow({
             {skipped && <Tag>Skipped this cycle</Tag>}
           </span>
         </span>
-        <span className={fe.isPaused ? 'tnum pr-3 text-body text-text-secondary' : 'tnum pr-3 text-body text-text-primary'}>
-          {formatPaise(fe.amount)}
+        <span
+          className={
+            fe.isPaused ? 'tnum pr-3 text-body text-text-secondary' : isIncoming(fe) ? 'tnum pr-3 text-body text-positive' : 'tnum pr-3 text-body text-text-primary'
+          }
+        >
+          {formatPaise(fe.amount, { signed: isIncoming(fe) })}
         </span>
       </button>
       {skipped && (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => void unskipDeduction(skipped.id).then(() => toast.show(`${fe.name} deducted again`, { durationMs: 2000 }))}
+          onClick={() => void unskipDeduction(skipped.id).then(() => toast.show(`${fe.name} ${isIncoming(fe) ? 'added' : 'deducted'} again`, { durationMs: 2000 }))}
         >
           Restore
         </Button>

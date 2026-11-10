@@ -9,7 +9,7 @@ import { useToday } from './app/useToday'
 import { ToastProvider } from './components/Toast'
 import { Button } from './components/ui'
 import { db } from './db/db'
-import type { FixedExpense, Transaction } from './domain/types'
+import type { Direction, FixedExpense, Transaction } from './domain/types'
 import { ExpenseSheet } from './features/expenses/ExpenseSheet'
 import { FixedSheet } from './features/fixed/FixedSheet'
 import type { ISODate } from './lib/date'
@@ -73,7 +73,7 @@ function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
   const openAdd = useCallback(() => setSheet({ open: true }), [])
   const openEdit = useCallback((tx: Transaction) => setSheet({ open: true, editing: tx }), [])
   const closeSheet = useCallback(() => setSheet({ open: false }), [])
-  const [fixedSheet, setFixedSheet] = useState<{ open: boolean; editing?: FixedExpense }>({ open: false })
+  const [fixedSheet, setFixedSheet] = useState<{ open: boolean; editing?: FixedExpense; direction?: Direction }>({ open: false })
   const cycle = useLiveQuery(() => db.cycles.get(cycleId), [cycleId])
 
   useHotkey('n', openAdd, !sheet.open && !fixedSheet.open)
@@ -95,7 +95,7 @@ function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
         {route === 'fixed' && (
           <FixedPage
             today={today}
-            onAdd={() => setFixedSheet({ open: true })}
+            onAdd={(direction) => setFixedSheet({ open: true, direction })}
             onEdit={(fe) => setFixedSheet({ open: true, editing: fe })}
           />
         )}
@@ -107,8 +107,9 @@ function MainApp({ cycleId, today }: { cycleId: string; today: ISODate }) {
       <FixedSheet
         open={fixedSheet.open}
         editing={fixedSheet.editing}
+        direction={fixedSheet.direction}
         today={today}
-        onClose={() => setFixedSheet({ open: false })}
+        onClose={() => setFixedSheet((s) => ({ ...s, open: false }))}
       />
     </>
   )

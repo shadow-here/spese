@@ -37,6 +37,12 @@ export function BalanceCard({ summary, isCurrent }: { summary: CycleSummary; isC
           </>
         )}
       </p>
+      {summary.otherIncome > 0 && (
+        <p className="mt-1 text-label text-text-secondary">
+          Salary <span className="tnum">{formatPaise(summary.salary, { decimals: 'auto' })}</span> +{' '}
+          <span className="tnum text-positive">{formatPaise(summary.otherIncome, { decimals: 'auto' })}</span> other income
+        </p>
+      )}
       {isCurrent && summary.fixedUpcoming > 0 && (
         <p className="mt-1 text-label text-text-secondary">
           <span className="tnum">{formatPaise(summary.fixedUpcoming, { decimals: 'auto' })}</span> fixed still to come ·{' '}

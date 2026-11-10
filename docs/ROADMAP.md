@@ -9,7 +9,7 @@ would need a backend, hosting cost and a privacy policy, and would break the "da
 leaves the phone" promise. It only becomes useful with cloud sync (P2). For keeping the app
 private on the phone, Phase 7's app lock is the right tool.
 
-## Phase 0 — Rename to Spese, welcome screen
+## Phase 0 — Rename to Spese, welcome screen — ✅ done 11 Nov 2026
 
 - **Name:** "Spese" in the app title, home-screen name, manifest, onboarding and sidebar.
 - **Welcome screen** shown only on a device with no data (never again after setup, so opening
@@ -22,7 +22,7 @@ private on the phone, Phase 7's app lock is the right tool.
 - Not a marketing website: the app *is* the site. (A separate public page can come later if you
   want to share Spese with others.)
 
-## Phase 1 — Extra income and monthly bonus (PRD #20, extended)
+## Phase 1 — Extra income and monthly bonus (PRD #20, extended) — ✅ done 11 Nov 2026
 
 - **One-off income:** the add sheet gets an **Expense / Income** switch. Income has an amount,
   type (Bonus, Freelance, Gift, Other), date and note, and adds to that cycle's balance
@@ -98,6 +98,6 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
 
 1. ~~Refund received in a later cycle~~ — decided: same cycle reduces the expense; later cycle
    adds to that cycle's balance (see Phase 2).
-2. Recurring income: should it ask you to confirm each month (like salary), or just add itself?
-   Recommendation: add itself, like fixed expenses. *(Phase 1)*
+2. ~~Recurring income: confirm each month, or add itself?~~ — built as "adds itself" (like fixed
+   costs); it can be skipped for one cycle, paused or ended. Easy to change if you'd rather confirm.
 3. Notifications approach. *(Phase 7)*

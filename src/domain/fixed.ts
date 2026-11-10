@@ -20,6 +20,10 @@ export function nextDueDate(fe: FixedExpense, today: ISODate, handledDueDates: R
   return dueDatesFor(fe, today, horizon).find((d) => !handledDueDates.has(d))
 }
 
+export function isIncoming(fe: FixedExpense): boolean {
+  return fe.direction === 'in'
+}
+
 export function isEnded(fe: FixedExpense, today: ISODate): boolean {
   return fe.endDate !== undefined && fe.endDate <= today
 }

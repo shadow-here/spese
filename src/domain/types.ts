@@ -46,7 +46,10 @@ export interface Transaction {
   note?: string
   /** P1 field, kept optional so P0 data is forward-compatible. */
   paymentMethod?: PaymentMethod
-  /** Set only on auto-deductions. */
+  /**
+   * Set on rows created automatically from a recurring entry: auto-deductions (type 'auto')
+   * and recurring income (type 'income'). For income rows, categoryId is an income kind.
+   */
   fixedExpenseId?: string
   /**
    * Auto-deductions only: the scheduled date. Together with fixedExpenseId this is the
@@ -61,6 +64,13 @@ export interface Transaction {
 
 export type Frequency = 'monthly'
 
+/** 'out' = a fixed cost (rent, WiFi); 'in' = recurring income (monthly bonus). */
+export type Direction = 'out' | 'in'
+
+/**
+ * A recurring monthly entry. Despite the name (kept for stored data), it covers both fixed
+ * costs and recurring income: `direction` says which. Missing direction = 'out' (v1.0 rows).
+ */
 export interface FixedExpense {
   id: string
   name: string
@@ -69,6 +79,8 @@ export interface FixedExpense {
   /** 1–31; short months use their last day. */
   deductionDay: number
   frequency: Frequency
+  /** Optional for rows saved before v1.1; treat missing as 'out'. For 'in', categoryId is an income kind. */
+  direction?: Direction
   /** Earliest date a deduction may be created. Moved forward on resume so paused months aren't back-filled. */
   activeFrom: ISODate
   /** Ended fixed expenses create nothing after this date (FR-3.5). */

@@ -1,5 +1,6 @@
 import { monthlyDueDates } from '../domain/cycle'
-import type { FixedExpense } from '../domain/types'
+import { isIncomeKind } from '../domain/income'
+import type { Direction, FixedExpense } from '../domain/types'
 import { addDays, maxDate, type ISODate } from '../lib/date'
 import type { Paise } from '../lib/money'
 import { runAutoDeductions } from './autoDeduct'
@@ -39,14 +40,18 @@ export async function passedDueDateThisCycle(deductionDay: number, today: ISODat
 /**
  * FR-3.1. With `deductThisCycle`, a due date already passed this cycle is deducted now
  * (with its original date); otherwise deductions start from today.
+ * `direction: 'in'` makes it recurring income (e.g. a monthly bonus); categoryId is then an
+ * income kind. Recurring income adds itself on its day, like a fixed cost deducts itself.
  */
 export async function addFixedExpense(
   input: FixedInput,
   today: ISODate,
-  options: { deductThisCycle?: boolean } = {},
+  options: { deductThisCycle?: boolean; direction?: Direction } = {},
   database: TrackerDB = defaultDb,
 ): Promise<FixedExpense> {
   validate(input)
+  const direction = options.direction ?? 'out'
+  if (direction === 'in' && !isIncomeKind(input.categoryId)) throw new ValidationError('Pick a kind of income')
   const cycle = await openCycle(database)
   const now = Date.now()
   const fe: FixedExpense = {
@@ -56,6 +61,7 @@ export async function addFixedExpense(
     categoryId: input.categoryId,
     deductionDay: input.deductionDay,
     frequency: 'monthly',
+    direction,
     activeFrom: options.deductThisCycle ? cycle.start : today,
     isPaused: false,
     createdAt: now,

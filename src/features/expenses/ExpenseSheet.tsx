@@ -1,11 +1,12 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { AmountInput, BottomSheet, Button, Chip, Input } from '../../components/ui'
+import { AmountInput, BottomSheet, Button, Chip, Input, Segmented } from '../../components/ui'
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { useToast } from '../../components/Toast'
 import { db } from '../../db/db'
 import {
   addExpense,
+  addIncome,
   allowedDateRange,
   deleteTransaction,
   lastUsedCategoryId,
@@ -13,6 +14,7 @@ import {
   updateTransaction,
 } from '../../db/transactions'
 import { FALLBACK_CATEGORY_ID } from '../../domain/categories'
+import { DEFAULT_INCOME_KIND, INCOME_KINDS } from '../../domain/income'
 import type { Transaction } from '../../domain/types'
 import type { ISODate } from '../../lib/date'
 import { paiseToInput, parseRupees } from '../../lib/money'
@@ -21,31 +23,49 @@ export interface ExpenseSheetProps {
   open: boolean
   onClose: () => void
   today: ISODate
-  /** Edit this transaction; omit to add a new expense. */
+  /** Edit this transaction; omit to add a new one. */
   editing?: Transaction
 }
 
+type Kind = 'expense' | 'income'
+
+function titleFor(kind: Kind, editing?: Transaction): string {
+  if (!editing) return kind === 'income' ? 'New income' : 'New expense'
+  if (editing.fixedExpenseId) return editing.type === 'income' ? 'Edit recurring income' : 'Edit auto-deduction'
+  return editing.type === 'income' ? 'Edit income' : 'Edit expense'
+}
+
 /**
- * Add / edit expense (FR-2.1, features 3–5). Amount is focused on open, the last-used
- * category and today's date are pre-filled, and Enter saves — a 5-second log.
+ * Add / edit an expense or income (FR-2.1, FR-1.5, features 3–5). Amount is focused on open,
+ * the last-used category and today's date are pre-filled, and Enter saves — a 5-second log.
+ * New entries start as Expense; the switch at the top changes to Income.
  */
 export function ExpenseSheet({ open, onClose, today, editing }: ExpenseSheetProps) {
-  const isAuto = editing?.type === 'auto'
-  const title = editing ? (isAuto ? 'Edit auto-deduction' : 'Edit expense') : 'New expense'
+  const [kind, setKind] = useState<Kind>('expense')
+  useEffect(() => {
+    if (open) setKind(editing?.type === 'income' ? 'income' : 'expense')
+  }, [open, editing])
   return (
-    <BottomSheet open={open} onClose={onClose} title={title}>
+    <BottomSheet open={open} onClose={onClose} title={titleFor(kind, editing)}>
       {/* Keyed so each open starts from fresh state. */}
-      {open && <ExpenseForm key={editing?.id ?? 'new'} onClose={onClose} today={today} editing={editing} />}
+      {open && <ExpenseForm key={editing?.id ?? 'new'} onClose={onClose} today={today} editing={editing} kind={kind} onKind={setKind} />}
     </BottomSheet>
   )
 }
 
-function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'>) {
+function ExpenseForm({
+  onClose,
+  today,
+  editing,
+  kind,
+  onKind,
+}: Omit<ExpenseSheetProps, 'open'> & { kind: Kind; onKind: (k: Kind) => void }) {
   const toast = useToast()
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
   const range = useLiveQuery(() => allowedDateRange(today), [today])
   const [amountText, setAmountText] = useState(editing ? paiseToInput(editing.amount) : '')
-  const [categoryId, setCategoryId] = useState<string | undefined>(editing?.categoryId)
+  const [categoryId, setCategoryId] = useState<string | undefined>(editing?.type !== 'income' ? editing?.categoryId : undefined)
+  const [incomeKindId, setIncomeKindId] = useState(editing?.type === 'income' ? editing.categoryId : DEFAULT_INCOME_KIND)
   const [date, setDate] = useState<ISODate>(editing?.date ?? today)
   const [note, setNote] = useState(editing?.note ?? '')
   const [amountError, setAmountError] = useState<string>()
@@ -53,7 +73,9 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [saving, setSaving] = useState(false)
   const dateId = useId()
-  const isAuto = editing?.type === 'auto'
+  const amountRef = useRef<HTMLInputElement>(null)
+  const isRecurring = !!editing?.fixedExpenseId
+  const isIncome = kind === 'income'
 
   // Feature 4: pre-select the last-used category for a new expense.
   useEffect(() => {
@@ -76,10 +98,13 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
     }
     setSaving(true)
     try {
-      const input = { amount, categoryId: categoryId ?? FALLBACK_CATEGORY_ID, date, note }
+      const input = { amount, categoryId: isIncome ? incomeKindId : (categoryId ?? FALLBACK_CATEGORY_ID), date, note }
       if (editing) {
         await updateTransaction(editing.id, input, today)
         toast.show('Saved')
+      } else if (isIncome) {
+        await addIncome(input, today)
+        toast.show('Income added', { durationMs: 2000 })
       } else {
         await addExpense(input, today)
         toast.show('Expense added', { durationMs: 2000 })
@@ -96,7 +121,7 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
     const removed = await deleteTransaction(editing.id)
     onClose()
     if (removed) {
-      toast.show(isAuto ? 'Skipped for this cycle' : 'Expense deleted', {
+      toast.show(isRecurring ? 'Skipped for this cycle' : isIncome ? 'Income deleted' : 'Expense deleted', {
         action: { label: 'Undo', onAction: () => void restoreTransaction(removed) },
       })
     }
@@ -104,7 +129,23 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      {!editing && (
+        <Segmented
+          label="Type"
+          value={kind}
+          onChange={(k) => {
+            onKind(k)
+            amountRef.current?.focus() // keep the 5-second flow: switch, then type the amount
+          }}
+          options={[
+            { value: 'expense', label: 'Expense' },
+            { value: 'income', label: 'Income' },
+          ]}
+        />
+      )}
+
       <AmountInput
+        ref={amountRef}
         label="Amount"
         hideLabel
         size="lg"
@@ -118,15 +159,22 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
       />
 
       <fieldset>
-        <legend className="mb-2 text-label text-text-secondary">Category</legend>
+        <legend className="mb-2 text-label text-text-secondary">{isIncome ? 'Kind' : 'Category'}</legend>
         {/* min-height reserves two rows so the sheet doesn't jump when categories load */}
         <div className="flex min-h-[72px] flex-wrap content-start gap-2">
-          {categories?.map((c) => (
-            <Chip key={c.id} selected={categoryId === c.id} onClick={() => setCategoryId(c.id)}>
-              <CategoryIcon icon={c.icon} />
-              {c.name}
-            </Chip>
-          ))}
+          {isIncome
+            ? INCOME_KINDS.map((k) => (
+                <Chip key={k.id} selected={incomeKindId === k.id} onClick={() => setIncomeKindId(k.id)}>
+                  <CategoryIcon icon={k.icon} />
+                  {k.name}
+                </Chip>
+              ))
+            : categories?.map((c) => (
+                <Chip key={c.id} selected={categoryId === c.id} onClick={() => setCategoryId(c.id)}>
+                  <CategoryIcon icon={c.icon} />
+                  {c.name}
+                </Chip>
+              ))}
         </div>
       </fieldset>
 
@@ -157,7 +205,13 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
         </div>
       </div>
 
-      <Input aria-label="Note" placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={140} />
+      <Input
+        aria-label="Note"
+        placeholder={isIncome ? 'Note (optional), e.g. Diwali bonus' : 'Note (optional)'}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={140}
+      />
 
       {formError && (
         <p role="alert" className="text-label text-negative">
@@ -167,17 +221,19 @@ function ExpenseForm({ onClose, today, editing }: Omit<ExpenseSheetProps, 'open'
 
       {confirmingDelete ? (
         <div className="flex items-center gap-2" role="group" aria-label="Confirm delete">
-          <p className="flex-1 text-body text-text-secondary">{isAuto ? 'Skip this deduction for this cycle?' : 'Delete this expense?'}</p>
+          <p className="flex-1 text-body text-text-secondary">
+            {isRecurring ? 'Skip this for this cycle?' : isIncome ? 'Delete this income?' : 'Delete this expense?'}
+          </p>
           <Button onClick={() => setConfirmingDelete(false)}>Cancel</Button>
           <Button variant="danger" onClick={() => void remove()} autoFocus>
-            {isAuto ? 'Skip' : 'Delete'}
+            {isRecurring ? 'Skip' : 'Delete'}
           </Button>
         </div>
       ) : (
         <div className="flex gap-2">
           {editing && (
             <Button variant="danger" size="lg" onClick={() => setConfirmingDelete(true)}>
-              {isAuto ? 'Skip this cycle' : 'Delete'}
+              {isRecurring ? 'Skip this cycle' : 'Delete'}
             </Button>
           )}
           <Button type="submit" variant="primary" size="lg" disabled={saving} className="flex-1">

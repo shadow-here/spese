@@ -1,7 +1,7 @@
 import { eachDay, type ISODate } from '../lib/date'
 import { percentOf, type Paise } from '../lib/money'
 import { cycleLength, daysElapsed, daysLeft } from './cycle'
-import { dueDatesFor } from './fixed'
+import { dueDatesFor, isIncoming } from './fixed'
 import type { Category, FixedExpense, PayCycle, Transaction } from './types'
 
 /**
@@ -92,6 +92,8 @@ export function summarizeCycle({ cycle, transactions, fixedExpenses, categories,
   )
   let fixedUpcoming = 0
   for (const fe of fixedExpenses) {
+    // Recurring income isn't a commitment, and isn't counted until it actually arrives.
+    if (isIncoming(fe)) continue
     for (const due of dueDatesFor(fe, cycle.start, cycle.end)) {
       if (!existing.has(`${fe.id}|${due}`)) fixedUpcoming += fe.amount
     }

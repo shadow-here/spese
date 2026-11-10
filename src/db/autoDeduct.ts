@@ -31,7 +31,8 @@ export async function runAutoDeductions(today: ISODate, database: TrackerDB = de
         const tx: Transaction = {
           id: newId(),
           cycleId: cycle.id,
-          type: 'auto',
+          // Recurring income lands as income; fixed costs as auto-deductions.
+          type: fe.direction === 'in' ? 'income' : 'auto',
           amount: fe.amount,
           categoryId: fe.categoryId,
           date: dueDate,

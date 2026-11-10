@@ -1,3 +1,4 @@
+import { isIncomeKind } from '../domain/income'
 import type { PayCycle, Transaction } from '../domain/types'
 import type { ISODate } from '../lib/date'
 import type { Paise } from '../lib/money'
@@ -33,7 +34,20 @@ export interface ExpenseInput {
 }
 
 /** FR-2.1 */
-export async function addExpense(input: ExpenseInput, today: ISODate, database: TrackerDB = defaultDb): Promise<Transaction> {
+export function addExpense(input: ExpenseInput, today: ISODate, database: TrackerDB = defaultDb): Promise<Transaction> {
+  return addEntry('expense', input, today, database)
+}
+
+/**
+ * FR-1.5 (P1): one-off income — bonus, freelance, gift. Adds to the balance of the cycle its
+ * date falls in. `categoryId` is an income kind (see domain/income.ts).
+ */
+export async function addIncome(input: ExpenseInput, today: ISODate, database: TrackerDB = defaultDb): Promise<Transaction> {
+  if (!isIncomeKind(input.categoryId)) throw new ValidationError('Pick a kind of income')
+  return addEntry('income', input, today, database)
+}
+
+async function addEntry(type: 'expense' | 'income', input: ExpenseInput, today: ISODate, database: TrackerDB): Promise<Transaction> {
   checkAmount(input.amount)
   return database.transaction('rw', database.cycles, database.transactions, async () => {
     const cycle = await resolveCycle(input.date, today, database)
@@ -42,7 +56,7 @@ export async function addExpense(input: ExpenseInput, today: ISODate, database: 
     const tx: Transaction = {
       id: newId(),
       cycleId: cycle.id,
-      type: 'expense',
+      type,
       amount: input.amount,
       categoryId: input.categoryId,
       date: input.date,
@@ -84,13 +98,14 @@ export async function updateTransaction(
 
 /**
  * FR-2.5: delete and return the row so the caller can undo.
- * An auto-deduction is marked skipped instead, so the next open doesn't re-create it.
+ * A row created from a recurring entry (auto-deduction or recurring income) is marked skipped
+ * instead, so the next open doesn't re-create it.
  */
 export async function deleteTransaction(id: string, database: TrackerDB = defaultDb): Promise<Transaction | undefined> {
   return database.transaction('rw', database.transactions, async () => {
     const existing = await database.transactions.get(id)
     if (!existing) return undefined
-    if (existing.type === 'auto') await database.transactions.update(id, { skipped: true, updatedAt: Date.now() })
+    if (existing.fixedExpenseId) await database.transactions.update(id, { skipped: true, updatedAt: Date.now() })
     else await database.transactions.delete(id)
     return existing
   })
