@@ -9,7 +9,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': a new version waits until the user taps "Reload" (UpdatePrompt.tsx), so an
+      // update never reloads the page mid-entry. Registration happens in code, not an injected script.
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['icon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Spese',
@@ -39,5 +42,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     testTimeout: 15000,
+    // The PWA plugin's virtual module doesn't exist under Vitest; tests use a stub.
+    alias: { 'virtual:pwa-register/react': '/src/test/pwaRegisterStub.ts' },
   },
 })

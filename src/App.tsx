@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AppShell } from './app/AppShell'
+import { UpdatePrompt } from './app/UpdatePrompt'
 import { useRoute, type RouteId } from './app/routes'
 import { useHotkey } from './app/useHotkey'
 import { useStartup } from './app/useStartup'
@@ -31,6 +32,7 @@ export default function App() {
   return (
     <ToastProvider>
       <Boot />
+      <UpdatePrompt />
     </ToastProvider>
   )
 }

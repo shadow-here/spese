@@ -15,9 +15,13 @@ Add to Home Screen to work. Every free static host does that by default.
 Both configs keep `sw.js`, `registerSW.js` and the manifest uncached, so installed apps
 pick up new versions; hashed `assets/*` are cached forever.
 
-**After each deploy** an installed app downloads the new version in the background the next
-time it's opened, and shows it on a later open — usually within two or three opens (measured
-11 Nov 2026). Your data is never touched by an update.
+**After each deploy** an installed app checks for the new version when it's opened or brought
+back to the foreground (and hourly while open), downloads it in the background, then shows a
+banner: *"A new version of Spese is ready — Later / Reload"*. Nothing reloads on its own, so an
+update never interrupts an entry. Your data is never touched by an update.
+
+*One-time note:* a device still running the version from before 11 Nov 2026 (which had no
+banner) picks up this version once the app is fully closed (swiped away) and reopened.
 
 ## Before the first real use — on an iPhone (iOS 16.4+)
 
