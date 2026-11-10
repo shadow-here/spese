@@ -5,11 +5,14 @@ import { EmptyState } from '../app/EmptyState'
 import { Button, Card, Select } from '../components/ui'
 import { db } from '../db/db'
 import { summarizeCycle } from '../domain/balance'
+import { cycleHistory, monthOverMonth, upcomingInNextWeek } from '../domain/history'
 import { refundsByExpense } from '../domain/refunds'
 import type { PayCycle, Transaction } from '../domain/types'
 import { BackupReminder } from '../features/backup/BackupReminder'
 import { BalanceCard } from '../features/dashboard/BalanceCard'
 import { OutflowBar } from '../features/dashboard/OutflowBar'
+import { StatTiles } from '../features/dashboard/StatTiles'
+import { UpcomingCard } from '../features/dashboard/UpcomingCard'
 import { SalaryConfirm } from '../features/cycle/SalaryConfirm'
 import { TransactionRow } from '../features/expenses/TransactionRow'
 import { minDate, type ISODate } from '../lib/date'
@@ -19,6 +22,11 @@ import { formatRange } from '../lib/format'
 // balance card (the number people open the app for) renders without waiting on it.
 const CategoryBreakdown = lazy(() => import('../features/dashboard/CategoryBreakdown').then((m) => ({ default: m.CategoryBreakdown })))
 const DailyTrend = lazy(() => import('../features/dashboard/DailyTrend').then((m) => ({ default: m.DailyTrend })))
+const MonthOverMonth = lazy(() => import('../features/dashboard/MonthOverMonth').then((m) => ({ default: m.MonthOverMonth })))
+const SavingsTrend = lazy(() => import('../features/dashboard/SavingsTrend').then((m) => ({ default: m.SavingsTrend })))
+
+/** How many cycles back the comparisons look (savings trend uses all of them; month-over-month the last 4). */
+const HISTORY_CYCLES = 12
 
 /** Same-size empty card while a chart chunk loads, so nothing below jumps. */
 function ChartSlot({ title, height }: { title: string; height: number }) {
@@ -65,6 +73,26 @@ export function DashboardPage({
   // Ignore the previous cycle's result while the newly selected one loads (no flash of wrong numbers).
   const fresh = data?.cycleId === cycle.id ? data : undefined
 
+  // The viewed cycle and up to 11 before it, for month-over-month and the savings trend.
+  const historyData = useLiveQuery(async () => {
+    const past = await db.cycles.where('start').belowOrEqual(cycle.start).reverse().limit(HISTORY_CYCLES).toArray()
+    const transactions = await db.transactions.where('cycleId').anyOf(past.map((c) => c.id)).toArray()
+    return { cycleId: cycle.id, cycles: past, transactions }
+  }, [cycle.id, cycle.start])
+  const history = useMemo(
+    () =>
+      fresh && historyData?.cycleId === cycle.id
+        ? cycleHistory(historyData.cycles, historyData.transactions, fresh.fixedExpenses, fresh.categories, today)
+        : undefined,
+    [fresh, historyData, cycle.id, today],
+  )
+  const finished = history?.filter((h) => h.savingsRate !== undefined) ?? []
+  const mom = history && history.length >= 2 ? monthOverMonth(history, today) : undefined
+  const upcoming = useMemo(
+    () => (fresh && isCurrent ? upcomingInNextWeek(fresh.fixedExpenses, fresh.transactions, today) : []),
+    [fresh, isCurrent, today],
+  )
+
   // A past cycle is viewed as of its last day.
   const asOf = isCurrent ? today : minDate(today, cycle.end)
   const summary = useMemo(() => (fresh ? summarizeCycle({ cycle, today: asOf, ...fresh }) : undefined), [fresh, cycle, asOf])
@@ -92,6 +120,8 @@ export function DashboardPage({
       {isCurrent && !cycle.salaryConfirmed && <SalaryConfirm cycle={cycle} />}
       {isCurrent && <BackupReminder />}
       <BalanceCard summary={summary} isCurrent={isCurrent} />
+      {isCurrent && <StatTiles summary={summary} lastFinished={finished.at(-1)} historyLoaded={history !== undefined} />}
+      {isCurrent && <UpcomingCard items={upcoming} today={today} categories={fresh.categories} />}
 
       {summary.isEmpty ? (
         <EmptyState
@@ -115,6 +145,16 @@ export function DashboardPage({
           <Suspense fallback={<ChartSlot title="Daily trend" height={340} />}>
             <DailyTrend daily={summary.daily} today={asOf} isCurrent={isCurrent} />
           </Suspense>
+          {mom && (
+            <Suspense fallback={<ChartSlot title="Month over month" height={300} />}>
+              <MonthOverMonth data={mom} />
+            </Suspense>
+          )}
+          {finished.length >= 2 && (
+            <Suspense fallback={<ChartSlot title="Savings rate" height={210} />}>
+              <SavingsTrend finished={finished} />
+            </Suspense>
+          )}
           <Card
             title="Recent transactions"
             action={

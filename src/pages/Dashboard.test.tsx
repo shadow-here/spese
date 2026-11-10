@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import App from '../App'
 import { db } from '../db/db'
 import { ensureCurrentCycle, onboard } from '../db/cycles'
@@ -54,6 +54,36 @@ describe('dashboard', () => {
     const card = (await screen.findByRole('heading', { name: 'Recent transactions' })).closest('section')!
     expect(within(card).getByText('Cab')).toBeInTheDocument()
     expect(within(card).getByText('Auto')).toBeInTheDocument()
+  })
+
+  it('shows safe to spend, fixed share and last cycle’s savings', async () => {
+    render(<App />)
+    const tile = async (name: string) => (await screen.findByRole('region', { name })).textContent
+    // free to spend 32,660 over 22 days (10–31 Dec) = 1,484.5 → ₹1,484
+    expect(await tile('Safe to spend today')).toBe('Safe to spend today₹1,484for 22 days')
+    // (15,000 rent + 1,500 gym) ÷ 50,000
+    expect(await tile('Fixed costs')).toBe('Fixed costs33%of income')
+    // November: 50,000 − 1,000 (loads with the cycle history)
+    await waitFor(async () => expect(await tile('Saved last cycle')).toBe('Saved last cycle₹49,00098% of income'))
+  })
+
+  it('lists what is due in the next 7 days', async () => {
+    await addFixedExpense({ name: 'WiFi', amount: 79900, categoryId: 'bills', deductionDay: 14 }, '2026-12-10', {}, db)
+    render(<App />)
+    const card = (await screen.findByRole('heading', { name: 'Next 7 days' })).closest('section')!
+    expect(within(card).getByText('WiFi')).toBeInTheDocument()
+    expect(within(card).getByText('Mon 14 Dec')).toBeInTheDocument()
+    expect(within(card).queryByText('Gym')).not.toBeInTheDocument() // 20 Dec is more than a week away
+  })
+
+  it('compares this cycle with the last one', async () => {
+    render(<App />)
+    // The chart loads in its own chunk; wait for the real card, not its placeholder.
+    await waitFor(() => {
+      const card = screen.getByRole('heading', { name: 'Month over month' }).closest('section')!
+      expect(within(card).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['1 Nov₹1,000', 'This cycle₹15,840 so far'])
+    })
+    expect(screen.queryByRole('heading', { name: 'Savings rate' })).not.toBeInTheDocument() // needs 2 finished cycles
   })
 
   it('switches to a past cycle', async () => {

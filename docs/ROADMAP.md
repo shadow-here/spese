@@ -65,7 +65,7 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
   share colours; charts then rely on labels (already always present), and the donut folds the
   smallest into "Other".
 
-## Phase 4 — Dashboard additions (PRD #15, #16, #17 + P1 widgets)
+## Phase 4 — Dashboard additions (PRD #15, #16, #17 + P1 widgets) — ✅ done 11 Nov 2026
 
 - **Safe to spend today:** free to spend ÷ days left.
 - **Upcoming deductions:** fixed costs (and recurring income) in the next 7 days.
