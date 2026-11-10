@@ -27,6 +27,11 @@ export class TrackerDB extends Dexie {
           await tx.table('categories').update(c.id, { colour: c.colour })
         }
       })
+    // v3: refunds — index refundOf so an expense's refunds can be looked up.
+    this.version(3).stores({
+      transactions:
+        'id, cycleId, date, type, categoryId, fixedExpenseId, refundOf, [fixedExpenseId+dueDate], [cycleId+date]',
+    })
     this.on('populate', (tx) => {
       void tx.table('categories').bulkAdd(DEFAULT_CATEGORIES)
     })

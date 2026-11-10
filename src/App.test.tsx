@@ -137,6 +137,32 @@ describe('expenses', () => {
     expect((await db.transactions.toArray())[0]).toMatchObject({ type: 'income', categoryId: 'income-freelance', amount: 500000 })
   })
 
+  it('records a refund on an expense: shows net amount and "back", no separate row', async () => {
+    render(<App />)
+    await screen.findByText('₹50,000.00')
+    await addViaSheet('1800', 'Food', 'Dinner')
+    expect(await screen.findByText('₹48,200.00')).toBeInTheDocument()
+
+    fireEvent.click(await screen.findByRole('button', { name: /Dinner/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit expense' })
+    fireEvent.click(await within(dialog).findByRole('button', { name: 'Add refund' }))
+    const form = within(dialog).getByRole('form', { name: 'Add refund' })
+    fireEvent.change(within(form).getByLabelText('Amount back'), { target: { value: '600' } })
+    fireEvent.change(within(form).getByLabelText('Refund note'), { target: { value: "Rahul's share" } })
+    fireEvent.submit(form)
+
+    expect(await within(dialog).findByText(/Rahul's share/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/counts as/)).toHaveTextContent('₹600 back · counts as ₹1,200')
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(await screen.findByText('₹48,800.00')).toBeInTheDocument() // balance: 50,000 − 1,200
+    const recent = screen.getByRole('heading', { name: 'Recent transactions' }).closest('section')!
+    expect(within(recent).getByText('₹1,200.00')).toBeInTheDocument()
+    expect(within(recent).getByText('₹600 back')).toBeInTheDocument()
+    expect(within(recent).getAllByRole('button').filter((b) => /Dinner/.test(b.textContent ?? ''))).toHaveLength(1)
+    expect(within(recent).queryByText(/Rahul/)).not.toBeInTheDocument()
+  })
+
   it('requires an amount', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })

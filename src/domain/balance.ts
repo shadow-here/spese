@@ -30,7 +30,7 @@ export interface CycleSummary {
   cycleDays: number
   byCategory: CategorySpend[]
   daily: DailyPoint[]
-  /** Latest first; skipped auto-deductions excluded. */
+  /** Latest first; skipped auto-deductions and refund rows excluded. */
   recent: Transaction[]
   isEmpty: boolean
 }
@@ -73,7 +73,22 @@ export function summarizeCycle({ cycle, transactions, fixedExpenses, categories,
   const perCategory = new Map<string, Paise>()
   const perDay = new Map<ISODate, Paise>()
 
+  // Refund rule (domain/refunds.ts): a refund whose expense is in this cycle reduces that
+  // expense (on the expense's day and category); otherwise it arrived in a later cycle and
+  // counts as income here.
+  const expensesHere = new Map(txs.filter((t) => t.type === 'expense').map((t) => [t.id, t]))
   for (const t of txs) {
+    if (t.type === 'refund') {
+      const expense = t.refundOf ? expensesHere.get(t.refundOf) : undefined
+      if (expense) {
+        variableSpent -= t.amount
+        perDay.set(expense.date, (perDay.get(expense.date) ?? 0) - t.amount)
+        perCategory.set(expense.categoryId, (perCategory.get(expense.categoryId) ?? 0) - t.amount)
+      } else {
+        otherIncome += t.amount
+      }
+      continue
+    }
     if (t.type === 'income') {
       otherIncome += t.amount
       continue
@@ -107,6 +122,7 @@ export function summarizeCycle({ cycle, transactions, fixedExpenses, categories,
   const outflow = fixedDeducted + variableSpent
   const catById = new Map(categories.map((c) => [c.id, c]))
   const byCategory: CategorySpend[] = [...perCategory.entries()]
+    .filter(([, amount]) => amount > 0) // a fully refunded category drops out
     .map(([categoryId, amount]) => {
       const cat = catById.get(categoryId)
       return {
@@ -134,7 +150,9 @@ export function summarizeCycle({ cycle, transactions, fixedExpenses, categories,
     }
   })
 
-  const recent = [...txs]
+  // Refunds never appear as their own row — they show on their expense.
+  const recent = txs
+    .filter((t) => t.type !== 'refund')
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1))
     .slice(0, 10)
 

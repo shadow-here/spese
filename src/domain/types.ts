@@ -31,7 +31,11 @@ export interface PayCycle {
   salaryConfirmed: boolean
 }
 
-export type TransactionType = 'expense' | 'income' | 'auto'
+/**
+ * 'refund' = money back on an expense (v1.1 Phase 2). Linked via `refundOf`; never listed on
+ * its own — it shows on the expense it belongs to.
+ */
+export type TransactionType = 'expense' | 'income' | 'auto' | 'refund'
 
 export type PaymentMethod = 'upi' | 'card' | 'cash' | 'other'
 
@@ -56,6 +60,12 @@ export interface Transaction {
    * idempotency key, so editing `date` never causes a duplicate deduction.
    */
   dueDate?: ISODate
+  /**
+   * Refund rows only: the expense this money came back for. Same cycle as the expense → the
+   * expense counts net of it; a later cycle → it adds to that later cycle's balance instead.
+   * categoryId copies the expense's category.
+   */
+  refundOf?: string
   /** Auto-deduction skipped for this cycle (FR-3.6). Kept as a row so it is not re-created. */
   skipped?: boolean
   createdAt: number

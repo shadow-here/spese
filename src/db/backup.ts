@@ -85,10 +85,16 @@ function validateRows(data: Record<string, unknown>) {
     categoryIds.add((c as Record<string, unknown>).id as string)
   }
 
+  const txIds = new Set<string>()
   for (const t of data.transactions as unknown[]) {
     check(isObj(t) && isStr(t.id) && cycleIds.has(t.cycleId as string), 'transaction cycle')
     const r = t as Record<string, unknown>
-    check(['expense', 'income', 'auto'].includes(r.type as string) && isPositivePaise(r.amount) && isISODate(r.date) && isStr(r.categoryId), 'transaction')
+    check(['expense', 'income', 'auto', 'refund'].includes(r.type as string) && isPositivePaise(r.amount) && isISODate(r.date) && isStr(r.categoryId), 'transaction')
+    txIds.add(r.id as string)
+  }
+  // Every refund must point at a transaction in the same backup.
+  for (const t of data.transactions as Record<string, unknown>[]) {
+    if (t.type === 'refund') check(isStr(t.refundOf) && txIds.has(t.refundOf as string), 'refund')
   }
 
   for (const f of data.fixedExpenses as unknown[]) {

@@ -18,6 +18,7 @@ import { DEFAULT_INCOME_KIND, INCOME_KINDS } from '../../domain/income'
 import type { Transaction } from '../../domain/types'
 import type { ISODate } from '../../lib/date'
 import { paiseToInput, parseRupees } from '../../lib/money'
+import { RefundsSection } from './RefundsSection'
 
 export interface ExpenseSheetProps {
   open: boolean
@@ -49,6 +50,8 @@ export function ExpenseSheet({ open, onClose, today, editing }: ExpenseSheetProp
     <BottomSheet open={open} onClose={onClose} title={titleFor(kind, editing)}>
       {/* Keyed so each open starts from fresh state. */}
       {open && <ExpenseForm key={editing?.id ?? 'new'} onClose={onClose} today={today} editing={editing} kind={kind} onKind={setKind} />}
+      {/* Its own form (forms can't nest), below the expense's Save. */}
+      {open && editing?.type === 'expense' && <RefundsSection key={`refunds-${editing.id}`} expense={editing} today={today} />}
     </BottomSheet>
   )
 }

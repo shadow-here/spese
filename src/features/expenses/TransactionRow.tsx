@@ -1,6 +1,7 @@
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { ListRow, Tag } from '../../components/ui'
 import { incomeKind } from '../../domain/income'
+import { netAmount, type RefundInfo } from '../../domain/refunds'
 import type { Category, Transaction } from '../../domain/types'
 import { formatDate } from '../../lib/format'
 import { formatPaise } from '../../lib/money'
@@ -9,14 +10,18 @@ import { formatPaise } from '../../lib/money'
 export function TransactionRow({
   tx,
   category,
+  refunds,
   showDate = false,
   onClick,
 }: {
   tx: Transaction
   category: Category | undefined
+  /** Refunds on this expense: the row shows the net amount and "₹X back". */
+  refunds?: RefundInfo
   showDate?: boolean
   onClick?: () => void
 }) {
+  const amount = tx.type === 'expense' ? netAmount(tx, refunds) : tx.amount
   const income = tx.type === 'income'
   // Income rows carry an income kind (Bonus, Freelance…) instead of a spending category.
   const kind = income ? incomeKind(tx.categoryId) : undefined
@@ -36,8 +41,13 @@ export function TransactionRow({
       }
       subtitle={subtitle || undefined}
       trailing={
-        <span className={income ? 'tnum text-body text-positive' : 'tnum text-body text-text-primary'}>
-          {formatPaise(tx.amount, { signed: income })}
+        <span className="flex flex-col items-end">
+          <span className={income ? 'tnum text-body text-positive' : 'tnum text-body text-text-primary'}>
+            {formatPaise(amount, { signed: income })}
+          </span>
+          {refunds && refunds.total > 0 && (
+            <span className="tnum text-label text-text-secondary">{formatPaise(refunds.total, { decimals: 'auto' })} back</span>
+          )}
         </span>
       }
     />

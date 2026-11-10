@@ -5,6 +5,7 @@ import { EmptyState } from '../app/EmptyState'
 import { Button } from '../components/ui'
 import { db } from '../db/db'
 import { TransactionRow } from '../features/expenses/TransactionRow'
+import { netAmount, refundsByExpense } from '../domain/refunds'
 import type { Transaction } from '../domain/types'
 import { addDays, type ISODate } from '../lib/date'
 import { formatDate } from '../lib/format'
@@ -22,8 +23,14 @@ export function TransactionsPage({ today, onAdd, onEdit }: { today: ISODate; onA
   const categories = useLiveQuery(() => db.categories.toArray(), [])
   const catById = useMemo(() => new Map(categories?.map((c) => [c.id, c])), [categories])
 
+  const refunds = useMemo(() => {
+    const all = transactions ?? []
+    return refundsByExpense(all, new Map(all.map((t) => [t.id, t])))
+  }, [transactions])
+
   const groups = useMemo(() => {
-    const visible = (transactions ?? []).filter((t) => !t.skipped)
+    // Refunds show on their expense, never as their own row.
+    const visible = (transactions ?? []).filter((t) => !t.skipped && t.type !== 'refund')
     const map = new Map<ISODate, Transaction[]>()
     for (const t of visible) {
       const list = map.get(t.date) ?? []
@@ -33,9 +40,11 @@ export function TransactionsPage({ today, onAdd, onEdit }: { today: ISODate; onA
     return [...map.entries()].map(([date, items]) => ({
       date,
       items: items.sort((a, b) => b.createdAt - a.createdAt),
-      spent: items.filter((t) => t.type !== 'income').reduce((s, t) => s + t.amount, 0),
+      spent: items
+        .filter((t) => t.type === 'expense' || t.type === 'auto')
+        .reduce((s, t) => s + (t.type === 'expense' ? netAmount(t, refunds.get(t.id)) : t.amount), 0),
     }))
-  }, [transactions])
+  }, [transactions, refunds])
 
   if (!transactions || !categories) return null
 
@@ -64,7 +73,7 @@ export function TransactionsPage({ today, onAdd, onEdit }: { today: ISODate; onA
           </header>
           <div className="overflow-hidden rounded-card border border-border bg-surface">
             {g.items.map((t) => (
-              <TransactionRow key={t.id} tx={t} category={catById.get(t.categoryId)} onClick={() => onEdit(t)} />
+              <TransactionRow key={t.id} tx={t} category={catById.get(t.categoryId)} refunds={refunds.get(t.id)} onClick={() => onEdit(t)} />
             ))}
           </div>
         </section>

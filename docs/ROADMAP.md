@@ -32,7 +32,7 @@ private on the phone, Phase 7's app lock is the right tool.
 - Dashboard: the balance card shows "of ₹X income" (salary + extras); income appears in
   recent transactions in green with a +.
 
-## Phase 2 — Refunds on a transaction (new)
+## Phase 2 — Refunds on a transaction (new) — ✅ done 11 Nov 2026
 
 Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
 

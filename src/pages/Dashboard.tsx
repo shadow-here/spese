@@ -5,6 +5,7 @@ import { EmptyState } from '../app/EmptyState'
 import { Button, Card, Select } from '../components/ui'
 import { db } from '../db/db'
 import { summarizeCycle } from '../domain/balance'
+import { refundsByExpense } from '../domain/refunds'
 import type { PayCycle, Transaction } from '../domain/types'
 import { BackupReminder } from '../features/backup/BackupReminder'
 import { BalanceCard } from '../features/dashboard/BalanceCard'
@@ -52,12 +53,14 @@ export function DashboardPage({
   const isCurrent = cycle.id === currentCycle.id
 
   const data = useLiveQuery(async () => {
-    const [transactions, fixedExpenses, categories] = await Promise.all([
+    const [transactions, fixedExpenses, categories, allRefunds] = await Promise.all([
       db.transactions.where('cycleId').equals(cycle.id).toArray(),
       db.fixedExpenses.toArray(),
       db.categories.toArray(),
+      // Refunds from any cycle, so a row can say "₹X back" even if the money came later.
+      db.transactions.where('type').equals('refund').toArray(),
     ])
-    return { cycleId: cycle.id, transactions, fixedExpenses, categories }
+    return { cycleId: cycle.id, transactions, fixedExpenses, categories, allRefunds }
   }, [cycle.id])
   // Ignore the previous cycle's result while the newly selected one loads (no flash of wrong numbers).
   const fresh = data?.cycleId === cycle.id ? data : undefined
@@ -66,6 +69,10 @@ export function DashboardPage({
   const asOf = isCurrent ? today : minDate(today, cycle.end)
   const summary = useMemo(() => (fresh ? summarizeCycle({ cycle, today: asOf, ...fresh }) : undefined), [fresh, cycle, asOf])
   const catById = useMemo(() => new Map(fresh?.categories.map((c) => [c.id, c])), [fresh])
+  const refunds = useMemo(
+    () => (fresh ? refundsByExpense(fresh.allRefunds, new Map(fresh.transactions.map((t) => [t.id, t]))) : new Map()),
+    [fresh],
+  )
   if (!summary || !fresh) return null
 
   return (
@@ -117,7 +124,7 @@ export function DashboardPage({
             }
           >
             {summary.recent.map((t) => (
-              <TransactionRow key={t.id} tx={t} category={catById.get(t.categoryId)} showDate onClick={() => onEdit(t)} />
+              <TransactionRow key={t.id} tx={t} category={catById.get(t.categoryId)} refunds={refunds.get(t.id)} showDate onClick={() => onEdit(t)} />
             ))}
           </Card>
         </>
