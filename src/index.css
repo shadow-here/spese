@@ -1,0 +1,134 @@
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+
+/*
+ * Design tokens — PRD "Design system". Dark is the default and only theme in P0;
+ * a light theme only needs to redefine these variables under [data-theme='light'].
+ */
+:root {
+  --bg: #08090a;
+  --surface: #0f1011;
+  --surface-hover: #16171a;
+  --border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f7f8f8;
+  --text-secondary: #8a8f98;
+  --text-tertiary: #62666d;
+  --accent: #5e6ad2;
+  /* Text on accent fills. Pure white clears WCAG AA (4.7:1); text-primary #F7F8F8 is only 4.4:1. */
+  --on-accent: #ffffff;
+  --positive: #4cb782;
+  --warning: #f2c94c;
+  --negative: #eb5757;
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Only our tokens — drop Tailwind's default palette so nothing off-system sneaks in. */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-negative: var(--negative);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale (rem so it follows the user's text-size setting; 1rem = 16px):
+     balance 40/600, title 20/600, body 14/400, label 12/500 */
+  --text-balance: 2.5rem;
+  --text-balance--line-height: 1.2;
+  --text-balance--font-weight: 600;
+  --text-balance--letter-spacing: -0.02em;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.4;
+  --text-title--font-weight: 600;
+  --text-title--letter-spacing: -0.01em;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.43;
+  --text-body--font-weight: 400;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.33;
+  --text-label--font-weight: 500;
+
+  /* Radius: 6 buttons/inputs, 8 cards, 12 sheets */
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-sheet: 12px;
+
+  /* 4px grid: Tailwind's default --spacing (0.25rem = 4px) is kept as is. */
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.43;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  ::placeholder {
+    color: var(--text-tertiary);
+  }
+}
+
+/* Tabular figures for every amount */
+@utility tnum {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* The only motion allowed: 120–150ms ease-out on hover / press / sheet open */
+@utility transition-quick {
+  transition-property: background-color, border-color, color, opacity, transform;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@utility animate-sheet-in {
+  animation: sheet-in 150ms var(--ease-out);
+}
+@utility animate-fade-in {
+  animation: fade-in 150ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
