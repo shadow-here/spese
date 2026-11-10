@@ -1,14 +1,15 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { useToast } from '../components/Toast'
 import { AmountInput, Button, Card, Select } from '../components/ui'
-import { deleteAllData, parseBackup, restoreBackup, type Backup } from '../db/backup'
+import { deleteAllData } from '../db/backup'
 import { changePayDay, MAX_SHIFT_DAYS, shiftCurrentCycleStart } from '../db/cycleSettings'
 import { confirmSalary } from '../db/cycles'
 import { db } from '../db/db'
 import { nextPayDateAfter } from '../domain/cycle'
 import type { PayCycle } from '../domain/types'
+import { RestoreFromFile } from '../features/backup/RestoreFromFile'
 import { useExportBackup } from '../features/backup/useBackup'
 import { addDays, maxDate, minDate, todayISO, type ISODate } from '../lib/date'
 import { formatDate, formatRange, ordinal } from '../lib/format'
@@ -193,29 +194,6 @@ function CategoriesCard() {
 
 function BackupCard({ lastBackupAt }: { lastBackupAt?: number }) {
   const exportBackup = useExportBackup()
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [pending, setPending] = useState<Backup>()
-  const [error, setError] = useState<string>()
-
-  async function onFile(file: File | undefined) {
-    setError(undefined)
-    setPending(undefined)
-    if (!file) return
-    try {
-      setPending(parseBackup(await file.text()))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not read that file')
-    } finally {
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }
-
-  async function restore() {
-    if (!pending) return
-    await restoreBackup(pending)
-    window.location.reload() // re-run startup on the restored data
-  }
-
   const last = lastBackupAt ? new Date(lastBackupAt) : undefined
   return (
     <Card title="Backup">
@@ -234,37 +212,9 @@ function BackupCard({ lastBackupAt }: { lastBackupAt?: number }) {
           <Button variant="primary" onClick={() => void exportBackup()}>
             Export backup
           </Button>
-          <Button onClick={() => fileRef.current?.click()}>Restore from file</Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="sr-only"
-            tabIndex={-1}
-            aria-label="Backup file"
-            onChange={(e) => void onFile(e.target.files?.[0])}
-          />
+          {/* Reload so startup re-runs on the restored data. */}
+          <RestoreFromFile replacing onRestored={() => window.location.reload()} />
         </div>
-        {error && (
-          <p role="alert" className="text-label text-negative">
-            {error}
-          </p>
-        )}
-        {pending && (
-          <div role="group" aria-label="Confirm restore" className="flex flex-col gap-2 rounded-card border border-border p-3">
-            <p className="text-body">
-              Replace everything on this device with the backup from{' '}
-              <span className="text-text-primary">{formatDate(todayISO(new Date(pending.exportedAt)), true)}</span> (
-              {pending.data.transactions.length} transactions)? This can’t be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setPending(undefined)}>Cancel</Button>
-              <Button variant="danger" onClick={() => void restore()}>
-                Replace and restore
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </Card>
   )

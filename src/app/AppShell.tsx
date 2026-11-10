@@ -19,7 +19,7 @@ export function AppShell({ route, onNavigate, onAdd, title, children }: AppShell
   return (
     <div className="flex min-h-full">
       <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r border-border bg-surface md:flex">
-        <div className="flex h-12 items-center px-4 text-body font-semibold tracking-[-0.01em]">Tracker</div>
+        <div className="flex h-12 items-center px-4 text-body font-semibold tracking-[-0.01em]">Spese</div>
         <div className="px-3 pb-3">
           <button
             type="button"

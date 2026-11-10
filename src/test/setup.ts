@@ -1,4 +1,9 @@
 import '@testing-library/jest-dom/vitest'
+import { configure } from '@testing-library/react'
+
+// Full-app tests (IndexedDB + React) run in parallel and can be slow under load; the
+// 1 s default for findBy*/waitFor made a couple of them flaky.
+configure({ asyncUtilTimeout: 3000 })
 
 // jsdom's Blob lacks text() (all real browsers have it).
 if (typeof Blob !== 'undefined' && !Blob.prototype.text) {

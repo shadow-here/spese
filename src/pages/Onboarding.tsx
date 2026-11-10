@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
-import { ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Plus, Repeat, ShieldCheck, Wallet } from 'lucide-react'
+import { RestoreFromFile } from '../features/backup/RestoreFromFile'
 import type { FixedExpense } from '../domain/types'
 import { FixedList, useFixedListData } from '../features/fixed/FixedList'
 import { FixedSheet } from '../features/fixed/FixedSheet'
@@ -12,13 +13,50 @@ import { parseRupees } from '../lib/money'
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 
-/** Onboarding: 1) salary + pay date (FR-1.1), 2) optional fixed costs (core flow step 2). */
+/**
+ * First run only (no data on the device): welcome → 1) salary + pay date (FR-1.1)
+ * → 2) optional fixed costs. Once set up, the app always opens straight to the dashboard.
+ */
 export function OnboardingPage({ today, onDone }: { today: ISODate; onDone: () => void }) {
-  const [stage, setStage] = useState<'salary' | 'fixed'>('salary')
+  const [stage, setStage] = useState<'welcome' | 'salary' | 'fixed'>('welcome')
+  if (stage === 'welcome') return <WelcomeStep onStart={() => setStage('salary')} onRestored={onDone} />
   return stage === 'salary' ? (
     <SalaryStep today={today} onDone={() => setStage('fixed')} />
   ) : (
     <FixedStep today={today} onDone={onDone} />
+  )
+}
+
+const POINTS = [
+  { icon: Wallet, text: 'Starts from your salary, so you always know what’s left to spend' },
+  { icon: Repeat, text: 'Rent, WiFi and subscriptions deduct themselves on their due day' },
+  { icon: ShieldCheck, text: 'No account, no server — your data stays on this phone' },
+]
+
+function WelcomeStep({ onStart, onRestored }: { onStart: () => void; onRestored: () => void }) {
+  return (
+    <main className="flex min-h-full items-start justify-center px-4 pt-[max(15vh,env(safe-area-inset-top))] pb-8">
+      <div className="flex w-full max-w-sm flex-col gap-8">
+        <header className="flex flex-col gap-2">
+          <h1 className="text-balance">Spese</h1>
+          <p className="text-body text-text-secondary">How much can I still spend this pay cycle?</p>
+        </header>
+        <ul className="flex flex-col gap-4">
+          {POINTS.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-start gap-3 text-body">
+              <Icon size={16} strokeWidth={1.5} aria-hidden="true" className="mt-0.5 shrink-0 text-text-secondary" />
+              {text}
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="primary" size="lg" onClick={onStart} className="w-full" autoFocus>
+            Get started
+          </Button>
+          <RestoreFromFile label="Restore from backup" size="lg" replacing={false} onRestored={onRestored} />
+        </div>
+      </div>
+    </main>
   )
 }
 

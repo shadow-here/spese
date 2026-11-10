@@ -2,6 +2,8 @@ import type { Category, FixedExpense, PayCycle, Transaction, User } from '../dom
 import { isISODate } from '../lib/date'
 import { db as defaultDb, type TrackerDB } from './db'
 
+// Internal id from before the app was named Spese. Kept so existing backup files (and the
+// IndexedDB database, also named 'tracker') keep working — never shown to the user.
 export const BACKUP_APP = 'tracker'
 export const BACKUP_VERSION = 1
 /** Remind to back up when the last backup (or setup) is older than this. */
@@ -46,7 +48,7 @@ export async function markBackedUp(now = Date.now(), database: TrackerDB = defau
 
 export function backupFileName(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `tracker-backup-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`
+  return `spese-backup-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`
 }
 
 // --- validation: a restore replaces everything, so check every row before touching the DB ---

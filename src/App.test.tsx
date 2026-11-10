@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import App from './App'
 import { db } from './db/db'
+import { createBackup } from './db/backup'
 import { ensureCurrentCycle, onboard } from './db/cycles'
 import { todayISO } from './lib/date'
 
@@ -14,6 +15,8 @@ beforeEach(async () => {
 describe('onboarding', () => {
   it('shows onboarding first, validates salary, then lands on the dashboard', async () => {
     render(<App />)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Spese' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Get started' }))
     const salary = await screen.findByLabelText('Net monthly salary (in-hand)')
     fireEvent.click(screen.getByRole('button', { name: 'Start tracking' }))
     expect(await screen.findByText('Enter your monthly in-hand salary')).toBeInTheDocument()
@@ -29,6 +32,33 @@ describe('onboarding', () => {
     const user = await db.users.get('me')
     expect(user).toMatchObject({ payDay: 25, defaultSalary: 5250050 })
     expect((await screen.findAllByText('₹52,500.50')).length).toBeGreaterThan(0)
+  })
+})
+
+describe('welcome screen', () => {
+  it('restores a backup without onboarding and lands on the dashboard', async () => {
+    // Make a backup on a set-up device, then wipe it like a reinstall.
+    await onboard({ salary: 5000000, payDay: 1, today: todayISO() }, db)
+    const backup = JSON.stringify(await createBackup(db))
+    await db.delete()
+    await db.open()
+
+    render(<App />)
+    await screen.findByRole('heading', { level: 1, name: 'Spese' })
+    fireEvent.change(screen.getByLabelText('Backup file'), { target: { files: [new File([backup], 'spese-backup.json')] } })
+    const confirm = await screen.findByRole('group', { name: 'Confirm restore' })
+    expect(confirm).not.toHaveTextContent('can’t be undone') // nothing to overwrite on a fresh device
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Restore' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument()
+    expect((await db.users.get('me'))!.defaultSalary).toBe(5000000)
+  })
+
+  it('is not shown once set up', async () => {
+    await onboard({ salary: 5000000, payDay: 1, today: todayISO() }, db)
+    render(<App />)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Get started' })).not.toBeInTheDocument()
   })
 })
 

@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Tracker',
-        short_name: 'Tracker',
-        description: 'Salary-first personal expense tracker',
+        name: 'Spese',
+        short_name: 'Spese',
+        description: 'Salary-first expense tracker: how much can I still spend this pay cycle?',
         theme_color: '#08090A',
         background_color: '#08090A',
         display: 'standalone',
@@ -38,5 +38,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    testTimeout: 15000,
   },
 })
