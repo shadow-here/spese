@@ -53,6 +53,56 @@ describe('settings', () => {
     ])
   })
 
+  it('adds a category with an icon and colour, and it appears in the add sheet', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Categories' })
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New category' })
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Groceries' } })
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'shopping cart' }))
+    await waitFor(() => expect(within(dialog).getByRole('radio', { name: /^Red/ })).toHaveAttribute('aria-checked', 'true')) // first free colour
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+
+    await waitFor(async () => expect((await db.categories.orderBy('order').last())!.name).toBe('Groceries'))
+    fireEvent.keyDown(document, { key: 'n' })
+    const add = await screen.findByRole('dialog', { name: 'New expense' })
+    expect(await within(add).findByRole('button', { name: 'Groceries' })).toBeInTheDocument()
+  })
+
+  it('renames Other but offers no Remove for it', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Categories' })
+    fireEvent.click(await within(section('Categories')).findByRole('button', { name: 'Other' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit category' })
+    expect(within(dialog).queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Misc' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(async () => expect((await db.categories.get('other'))!.name).toBe('Misc'))
+  })
+
+  it('reorders with the arrows', async () => {
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Move Transport up' }))
+    await waitFor(async () => expect((await db.categories.orderBy('order').first())!.id).toBe('transport'))
+    expect(screen.getByRole('button', { name: 'Move Transport up' })).toBeDisabled()
+  })
+
+  it('removes a category after choosing where its entries go', async () => {
+    await addExpense({ amount: 24000, categoryId: 'entertainment', date: '2026-11-09' }, '2026-11-10', db)
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Categories' })
+    fireEvent.click(await within(section('Categories')).findByRole('button', { name: 'Entertainment' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit category' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }))
+    const confirm = await within(dialog).findByRole('group', { name: 'Confirm remove' })
+    expect(confirm).toHaveTextContent('Entertainment is used by 1 entry. Move them to:')
+    fireEvent.change(within(confirm).getByLabelText('Move to'), { target: { value: 'shopping' } })
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Move and remove' }))
+
+    await waitFor(async () => expect(await db.categories.get('entertainment')).toBeUndefined())
+    expect((await db.transactions.toArray())[0]!.categoryId).toBe('shopping')
+  })
+
   it('rejects a bad backup file and restores a good one after confirmation', async () => {
     await addExpense({ amount: 24000, categoryId: 'food', date: '2026-11-09' }, '2026-11-10', db)
     const backup = JSON.stringify(await createBackup(db))

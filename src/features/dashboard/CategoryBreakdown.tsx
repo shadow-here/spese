@@ -11,14 +11,37 @@ import { formatPaise } from '../../lib/money'
  * (the order the palette is validated in); the list ranks by amount and carries the names,
  * amounts and shares, so identity never depends on colour. Hovering either highlights both.
  */
+export const REST = '__rest'
+const MAX_SEGMENTS = 8
+
+/**
+ * Donut segments: never more than 8 (the palette size). Past that, the 7 biggest keep their own
+ * segment and the rest fold into one neutral "N more". Kept segments follow the category order
+ * (`items` arrives ranked by amount). The ranked list still names every category.
+ */
+export function donutSegments(items: CategorySpend[], categories: Category[]): { donut: CategorySpend[]; foldedIds: Set<string> } {
+  const order = new Map(categories.map((c) => [c.id, c.order]))
+  const folded = items.length > MAX_SEGMENTS ? items.slice(MAX_SEGMENTS - 1) : []
+  const foldedIds = new Set(folded.map((i) => i.categoryId))
+  const kept = items.filter((i) => !foldedIds.has(i.categoryId))
+  const donut: CategorySpend[] = [
+    ...kept.sort((a, b) => (order.get(a.categoryId) ?? 99) - (order.get(b.categoryId) ?? 99)),
+    ...(folded.length
+      ? [{ categoryId: REST, name: `${folded.length} more`, colour: '#62666D', amount: folded.reduce((s, i) => s + i.amount, 0), percent: 0 }]
+      : []),
+  ]
+  return { donut, foldedIds }
+}
+
 export function CategoryBreakdown({ items, categories }: { items: CategorySpend[]; categories: Category[] }) {
   const [active, setActive] = useState<string>()
   if (items.length === 0) return null
 
-  const order = new Map(categories.map((c) => [c.id, c.order]))
-  const donut = [...items].sort((a, b) => (order.get(a.categoryId) ?? 99) - (order.get(b.categoryId) ?? 99))
+  const { donut, foldedIds } = donutSegments(items, categories)
   const total = items.reduce((s, i) => s + i.amount, 0)
   const focused = items.find((i) => i.categoryId === active)
+  // Hovering a folded category in the list highlights the shared segment.
+  const activeSegment = active && foldedIds.has(active) ? REST : active
 
   return (
     <Card title="Spend by category">
@@ -42,15 +65,15 @@ export function CategoryBreakdown({ items, categories }: { items: CategorySpend[
               onMouseLeave={() => setActive(undefined)}
             >
               {donut.map((d) => (
-                <Cell key={d.categoryId} fill={d.colour} fillOpacity={active && active !== d.categoryId ? 0.35 : 1} />
+                <Cell key={d.categoryId} fill={d.colour} fillOpacity={activeSegment && activeSegment !== d.categoryId ? 0.35 : 1} />
               ))}
             </Pie>
           </PieChart>
           {/* Centre label: total, or the hovered category */}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-label text-text-secondary">{focused ? focused.name : 'Total'}</span>
+            <span className="text-label text-text-secondary">{focused ? focused.name : active === REST ? donut.at(-1)!.name : 'Total'}</span>
             <span className="tnum text-body font-medium text-text-primary">
-              {formatPaise(focused ? focused.amount : total, { decimals: 'never' })}
+              {formatPaise(focused ? focused.amount : active === REST ? donut.at(-1)!.amount : total, { decimals: 'never' })}
             </span>
           </div>
         </div>

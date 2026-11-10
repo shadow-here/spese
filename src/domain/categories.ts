@@ -19,4 +19,26 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'other', name: 'Other', icon: 'circle-dashed', colour: '#9085E9', isDefault: true, order: 6 },
 ]
 
+/** "Other" is the fallback: it can be renamed but never removed. */
 export const FALLBACK_CATEGORY_ID = 'other'
+
+/**
+ * The 8 validated chart colours (dark-surface steps), in fixed order. The 7 defaults use the
+ * first 7; slot 8 (red) is free for the first custom category. Past 8 categories, colours are
+ * shared — charts always label categories by name, and the donut folds extras together.
+ */
+export const CATEGORY_PALETTE = ['#3987E5', '#D95926', '#199E70', '#C98500', '#D55181', '#008300', '#9085E9', '#E66767'] as const
+
+/** First palette colour no category uses yet, else the least-used one. */
+export function nextCategoryColour(categories: Pick<Category, 'colour'>[]): string {
+  const counts = new Map<string, number>(CATEGORY_PALETTE.map((c) => [c, 0]))
+  for (const c of categories) {
+    const key = c.colour.toUpperCase()
+    if (counts.has(key)) counts.set(key, counts.get(key)! + 1)
+  }
+  let best: string = CATEGORY_PALETTE[0]
+  for (const c of CATEGORY_PALETTE) if (counts.get(c)! < counts.get(best)!) best = c
+  return best
+}
+
+export const MAX_CATEGORY_NAME = 24

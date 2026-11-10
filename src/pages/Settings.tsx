@@ -1,14 +1,17 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { ChevronDown, ChevronUp, Plus } from 'lucide-react'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { useToast } from '../components/Toast'
 import { AmountInput, Button, Card, Select } from '../components/ui'
 import { deleteAllData } from '../db/backup'
+import { moveCategory } from '../db/categories'
 import { changePayDay, MAX_SHIFT_DAYS, shiftCurrentCycleStart } from '../db/cycleSettings'
 import { confirmSalary } from '../db/cycles'
 import { db } from '../db/db'
 import { nextPayDateAfter } from '../domain/cycle'
-import type { PayCycle } from '../domain/types'
+import type { Category, PayCycle } from '../domain/types'
+import { CategorySheet } from '../features/categories/CategorySheet'
 import { RestoreFromFile } from '../features/backup/RestoreFromFile'
 import { useExportBackup } from '../features/backup/useBackup'
 import { addDays, maxDate, minDate, todayISO, type ISODate } from '../lib/date'
@@ -174,21 +177,60 @@ function ShiftStartForm({ cycle, previous, today }: { cycle: PayCycle; previous?
   )
 }
 
+/** Manage categories (v1.1 Phase 3): tap to edit or remove, arrows to reorder, Add for a new one. */
 function CategoriesCard() {
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
+  const [sheet, setSheet] = useState<{ open: boolean; editing?: Category }>({ open: false })
+  const last = (categories?.length ?? 0) - 1
   return (
-    <Card title="Categories">
+    <Card
+      title="Categories"
+      action={
+        <Button variant="ghost" size="sm" onClick={() => setSheet({ open: true })} aria-label="Add category">
+          <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+          Add
+        </Button>
+      }
+    >
       <ul>
-        {categories?.map((c) => (
-          <li key={c.id} className="flex h-10 items-center gap-3 border-b border-border px-4 last:border-b-0">
-            <CategoryIcon icon={c.icon} className="text-text-secondary" />
-            <span className="flex-1 text-body">{c.name}</span>
-            <span aria-hidden="true" className="size-2 rounded-[2px]" style={{ background: c.colour }} />
+        {categories?.map((c, i) => (
+          <li key={c.id} className="flex min-h-10 items-center border-b border-border last:border-b-0">
+            <button
+              type="button"
+              onClick={() => setSheet({ open: true, editing: c })}
+              className="flex min-w-0 flex-1 items-center gap-3 py-2 pl-4 text-left transition-quick hover:bg-surface-hover"
+            >
+              <CategoryIcon icon={c.icon} className="shrink-0 text-text-secondary" />
+              <span className="min-w-0 flex-1 truncate text-body">{c.name}</span>
+              <span aria-hidden="true" className="mr-2 size-2 shrink-0 rounded-[2px]" style={{ background: c.colour }} />
+            </button>
+            <div className="flex pr-2">
+              <IconButton label={`Move ${c.name} up`} disabled={i === 0} onClick={() => void moveCategory(c.id, -1)}>
+                <ChevronUp size={16} strokeWidth={1.5} aria-hidden="true" />
+              </IconButton>
+              <IconButton label={`Move ${c.name} down`} disabled={i === last} onClick={() => void moveCategory(c.id, 1)}>
+                <ChevronDown size={16} strokeWidth={1.5} aria-hidden="true" />
+              </IconButton>
+            </div>
           </li>
         ))}
       </ul>
-      <p className="border-t border-border px-4 py-2 text-label text-text-secondary">Custom categories are coming in a later version.</p>
+      <CategorySheet open={sheet.open} editing={sheet.editing} onClose={() => setSheet({ open: false })} />
     </Card>
+  )
+}
+
+function IconButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex size-8 items-center justify-center rounded-control text-text-secondary transition-quick hover:bg-surface-hover hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
+    >
+      {children}
+    </button>
   )
 }
 

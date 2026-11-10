@@ -54,7 +54,7 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
   - The rule follows the refund's date, so editing a refund's date can move it between the two
     cases.
 
-## Phase 3 — Manage categories (PRD #21, extended)
+## Phase 3 — Manage categories (PRD #21, extended) — ✅ done 11 Nov 2026
 
 - **Add** a category: name, icon (from a small set), colour (from the validated palette).
 - **Rename** any category, **including "Other"**.
