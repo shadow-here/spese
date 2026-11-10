@@ -1,5 +1,6 @@
 import { FALLBACK_CATEGORY_ID, MAX_CATEGORY_NAME, nextCategoryColour } from '../domain/categories'
 import type { Category } from '../domain/types'
+import type { Paise } from '../lib/money'
 import { db as defaultDb, newId, type TrackerDB } from './db'
 import { ValidationError } from './transactions'
 
@@ -13,6 +14,13 @@ export interface CategoryInput {
   name: string
   icon: string
   colour?: string
+  /** Budget per pay cycle; null clears it. */
+  monthlyLimit?: Paise | null
+}
+
+function checkLimit(limit: Paise | null | undefined) {
+  if (limit !== null && limit !== undefined && (!Number.isSafeInteger(limit) || limit <= 0))
+    throw new ValidationError('A budget must be more than zero')
 }
 
 async function checkName(name: string, database: TrackerDB, exceptId?: string): Promise<string> {
@@ -34,6 +42,7 @@ export async function addCategory(input: CategoryInput, database: TrackerDB = de
     const all = await database.categories.toArray()
     const colour = input.colour ?? nextCategoryColour(all)
     checkColour(colour)
+    checkLimit(input.monthlyLimit)
     const category: Category = {
       id: newId(),
       name,
@@ -41,6 +50,7 @@ export async function addCategory(input: CategoryInput, database: TrackerDB = de
       colour,
       isDefault: false,
       order: all.reduce((m, c) => Math.max(m, c.order), -1) + 1,
+      ...(input.monthlyLimit ? { monthlyLimit: input.monthlyLimit } : {}),
     }
     await database.categories.add(category)
     return category
@@ -56,6 +66,10 @@ export async function updateCategory(id: string, patch: Partial<CategoryInput>, 
     if (patch.colour !== undefined) {
       checkColour(patch.colour)
       changes.colour = patch.colour
+    }
+    if (patch.monthlyLimit !== undefined) {
+      checkLimit(patch.monthlyLimit)
+      changes.monthlyLimit = patch.monthlyLimit ?? undefined // undefined removes the field (no budget)
     }
     await database.categories.update(id, changes)
   })

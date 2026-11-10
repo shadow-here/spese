@@ -31,12 +31,14 @@ export function cycleHistory(
 }
 
 /**
- * Safe to spend today: what's free once every fixed cost due this cycle is out, spread over
- * the days left (today included). Never negative; rounded down to whole rupees.
+ * Safe to spend today: what's free once every fixed cost due this cycle is out — and, with a
+ * savings goal, once the goal is set aside — spread over the days left (today included).
+ * Never negative; rounded down to whole rupees.
  */
-export function safeToSpendToday(summary: CycleSummary): Paise {
-  if (summary.daysLeft <= 0 || summary.freeToSpend <= 0) return 0
-  return Math.floor(summary.freeToSpend / summary.daysLeft / 100) * 100
+export function safeToSpendToday(summary: CycleSummary, savingsGoal: Paise = 0): Paise {
+  const spendable = summary.freeToSpend - savingsGoal
+  if (summary.daysLeft <= 0 || spendable <= 0) return 0
+  return Math.floor(spendable / summary.daysLeft / 100) * 100
 }
 
 /** Share of this cycle's income committed to fixed costs (deducted + still to come), 0–100+. */

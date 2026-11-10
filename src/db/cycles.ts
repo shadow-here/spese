@@ -76,6 +76,12 @@ export async function cycleForDate(date: ISODate, database: TrackerDB = defaultD
   return candidate && candidate.end >= date ? candidate : undefined
 }
 
+/** FR-5.3: set the savings goal per cycle; null removes it. */
+export async function setSavingsGoal(goal: Paise | null, database: TrackerDB = defaultDb): Promise<void> {
+  if (goal !== null && (!Number.isSafeInteger(goal) || goal <= 0)) throw new Error('A goal must be more than zero')
+  await database.users.update('me', { savingsGoal: goal ?? undefined })
+}
+
 /** FR-1.3: user confirms or edits the salary for a cycle; it becomes the default for future cycles. */
 export async function confirmSalary(cycleId: string, salary: Paise, database: TrackerDB = defaultDb): Promise<void> {
   if (!Number.isSafeInteger(salary) || salary <= 0) throw new Error('Salary must be a positive amount')

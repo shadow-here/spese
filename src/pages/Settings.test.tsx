@@ -69,6 +69,28 @@ describe('settings', () => {
     expect(await within(add).findByRole('button', { name: 'Groceries' })).toBeInTheDocument()
   })
 
+  it('sets and clears a category budget, and sets a savings goal', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Categories' })
+    fireEvent.click(await within(section('Categories')).findByRole('button', { name: 'Food' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Edit category' })
+    fireEvent.change(within(dialog).getByLabelText('Budget per pay cycle (optional)'), { target: { value: '6000' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(async () => expect((await db.categories.get('food'))!.monthlyLimit).toBe(600000))
+
+    fireEvent.click(await within(section('Categories')).findByRole('button', { name: 'Food' }))
+    dialog = await screen.findByRole('dialog', { name: 'Edit category' })
+    const budget = within(dialog).getByLabelText('Budget per pay cycle (optional)')
+    expect(budget).toHaveValue('6000')
+    fireEvent.change(budget, { target: { value: '' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(async () => expect((await db.categories.get('food'))!.monthlyLimit).toBeUndefined())
+
+    fireEvent.change(screen.getByLabelText('Savings goal per cycle (optional)'), { target: { value: '10000' } })
+    fireEvent.click(within(screen.getByLabelText('Savings goal per cycle (optional)').closest('form')!).getByRole('button', { name: 'Save' }))
+    await waitFor(async () => expect((await db.users.get('me'))!.savingsGoal).toBe(1000000))
+  })
+
   it('renames Other but offers no Remove for it', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Categories' })

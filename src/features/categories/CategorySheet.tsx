@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Check } from 'lucide-react'
 import { CATEGORY_ICON_CHOICES, CategoryIcon } from '../../components/CategoryIcon'
 import { useToast } from '../../components/Toast'
-import { BottomSheet, Button, Input, Select } from '../../components/ui'
+import { AmountInput, BottomSheet, Button, Input, Select } from '../../components/ui'
+import { paiseToInput, parseRupees } from '../../lib/money'
 import { addCategory, categoryUsage, removeCategory, updateCategory, type CategoryUsage } from '../../db/categories'
 import { db } from '../../db/db'
 import { CATEGORY_PALETTE, FALLBACK_CATEGORY_ID, MAX_CATEGORY_NAME, nextCategoryColour } from '../../domain/categories'
@@ -28,6 +29,7 @@ function CategoryForm({ onClose, editing }: { onClose: () => void; editing?: Cat
   const [name, setName] = useState(editing?.name ?? '')
   const [icon, setIcon] = useState(editing?.icon ?? 'shopping-cart')
   const [colour, setColour] = useState<string | undefined>(editing?.colour)
+  const [budgetText, setBudgetText] = useState(editing?.monthlyLimit ? paiseToInput(editing.monthlyLimit) : '')
   const [error, setError] = useState<string>()
   const [removing, setRemoving] = useState<{ usage: CategoryUsage; moveTo: string }>()
   const [saving, setSaving] = useState(false)
@@ -39,13 +41,19 @@ function CategoryForm({ onClose, editing }: { onClose: () => void; editing?: Cat
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    // Empty budget = no budget; anything else must be a valid amount.
+    const monthlyLimit = budgetText.trim() === '' ? null : parseRupees(budgetText)
+    if (monthlyLimit === 0 || (budgetText.trim() !== '' && monthlyLimit === null)) {
+      setError('Enter a budget amount, or leave it empty for none')
+      return
+    }
     setSaving(true)
     try {
       if (editing) {
-        await updateCategory(editing.id, { name, icon, colour })
+        await updateCategory(editing.id, { name, icon, colour, monthlyLimit })
         toast.show('Category saved', { durationMs: 2000 })
       } else {
-        const c = await addCategory({ name, icon, colour })
+        const c = await addCategory({ name, icon, colour, monthlyLimit })
         toast.show(`${c.name} added`, { durationMs: 2000 })
       }
       onClose()
@@ -88,6 +96,11 @@ function CategoryForm({ onClose, editing }: { onClose: () => void; editing?: Cat
         hint={isFallback ? '“Other” can be renamed, but not removed — uncategorised entries land here.' : undefined}
         autoFocus
       />
+
+      <div className="flex flex-col gap-1.5">
+        <AmountInput label="Budget per pay cycle (optional)" value={budgetText} onChange={(v) => (setBudgetText(v), setError(undefined))} placeholder="No budget" />
+        <p className="text-label text-text-secondary">You’ll get a heads-up at 80% and when you go over.</p>
+      </div>
 
       <fieldset>
         <legend className="mb-2 text-label text-text-secondary">Icon</legend>

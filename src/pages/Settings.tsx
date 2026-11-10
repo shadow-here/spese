@@ -7,7 +7,7 @@ import { AmountInput, Button, Card, Select } from '../components/ui'
 import { deleteAllData } from '../db/backup'
 import { moveCategory } from '../db/categories'
 import { changePayDay, MAX_SHIFT_DAYS, shiftCurrentCycleStart } from '../db/cycleSettings'
-import { confirmSalary } from '../db/cycles'
+import { confirmSalary, setSavingsGoal } from '../db/cycles'
 import { db } from '../db/db'
 import { nextPayDateAfter } from '../domain/cycle'
 import type { Category, PayCycle } from '../domain/types'
@@ -44,6 +44,9 @@ export function SettingsPage({ today }: { today: ISODate }) {
           <Row>
             <ShiftStartForm key={current.start} cycle={current} previous={previous} today={today} />
           </Row>
+          <Row>
+            <GoalForm key={user.savingsGoal ?? 'none'} goal={user.savingsGoal} />
+          </Row>
         </div>
       </Card>
 
@@ -58,6 +61,36 @@ export function SettingsPage({ today }: { today: ISODate }) {
 
 function Row({ children }: { children: ReactNode }) {
   return <div className="p-4">{children}</div>
+}
+
+/** FR-5.3: savings goal per cycle — what to have left when each cycle ends. Empty = no goal. */
+function GoalForm({ goal }: { goal?: number }) {
+  const toast = useToast()
+  const [text, setText] = useState(goal ? paiseToInput(goal) : '')
+  const [error, setError] = useState<string>()
+  const parsed = text.trim() === '' ? null : parseRupees(text)
+  const changed = (parsed ?? undefined) !== goal
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (parsed === 0 || (text.trim() !== '' && parsed === null)) return setError('Enter an amount, or leave it empty for no goal')
+    await setSavingsGoal(parsed)
+    toast.show(parsed ? 'Savings goal set — safe to spend now keeps it aside' : 'Savings goal removed')
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-1.5">
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <AmountInput label="Savings goal per cycle (optional)" value={text} onChange={(v) => (setText(v), setError(undefined))} error={error} placeholder="No goal" />
+        </div>
+        <Button type="submit" disabled={!changed} className="h-9">
+          Save
+        </Button>
+      </div>
+      <p className="text-label text-text-secondary">What you want left when each cycle ends. Safe to spend sets it aside.</p>
+    </form>
+  )
 }
 
 function SalaryForm({ cycle }: { cycle: PayCycle }) {

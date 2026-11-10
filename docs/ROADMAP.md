@@ -73,7 +73,7 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
 - **Savings rate:** what was left at each cycle end ÷ income (leftover counts as savings).
 - **Month-over-month:** this cycle vs the last 3, total and by category.
 
-## Phase 5 — Budgets and goals (PRD #18, #19)
+## Phase 5 — Budgets and goals (PRD #18, #19) — ✅ done 11 Nov 2026
 
 - Monthly limit per category; progress bars; warning at 80%, over at 100% (in-app banners).
 - Alert when remaining drops below 10% of salary.

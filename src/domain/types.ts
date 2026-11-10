@@ -17,6 +17,8 @@ export interface User {
   createdAt: number
   /** Last successful backup export (epoch ms), for the 14-day reminder. */
   lastBackupAt?: number
+  /** Savings goal per cycle (FR-5.3): the amount to have left when each cycle ends. */
+  savingsGoal?: Paise
 }
 
 export type CycleStatus = 'open' | 'closed'
@@ -109,6 +111,6 @@ export interface Category {
   colour: string
   isDefault: boolean
   order: number
-  /** P1. */
+  /** Budget per pay cycle (FR-5.1). Undefined = no budget. */
   monthlyLimit?: Paise
 }

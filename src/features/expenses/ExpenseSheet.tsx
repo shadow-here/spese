@@ -17,7 +17,9 @@ import { FALLBACK_CATEGORY_ID } from '../../domain/categories'
 import { DEFAULT_INCOME_KIND, INCOME_KINDS } from '../../domain/income'
 import type { Transaction } from '../../domain/types'
 import type { ISODate } from '../../lib/date'
-import { paiseToInput, parseRupees } from '../../lib/money'
+import { formatPaise, paiseToInput, parseRupees } from '../../lib/money'
+import { budgetUse } from '../../db/budgets'
+import { crossedThreshold } from '../../domain/budgets'
 import { RefundsSection } from './RefundsSection'
 
 export interface ExpenseSheetProps {
@@ -102,15 +104,28 @@ function ExpenseForm({
     setSaving(true)
     try {
       const input = { amount, categoryId: isIncome ? incomeKindId : (categoryId ?? FALLBACK_CATEGORY_ID), date, note }
+      // FR-5.2: note the budget before saving, so we can tell if this entry crossed 80% / 100%.
+      const spending = !isIncome && editing?.type !== 'income'
+      const before = spending ? await budgetUse(input.categoryId, date, today) : undefined
       if (editing) {
         await updateTransaction(editing.id, input, today)
-        toast.show('Saved')
       } else if (isIncome) {
         await addIncome(input, today)
-        toast.show('Income added', { durationMs: 2000 })
       } else {
         await addExpense(input, today)
-        toast.show('Expense added', { durationMs: 2000 })
+      }
+      const after = spending ? await budgetUse(input.categoryId, date, today) : undefined
+      const crossed = after && crossedThreshold(before?.percent ?? 0, after.percent)
+      if (after && crossed) {
+        const limit = formatPaise(after.limit, { decimals: 'never' })
+        toast.show(
+          crossed === 'over'
+            ? `${after.category.name} is over its ${limit} budget`
+            : `${after.category.name} is at ${Math.round(after.percent)}% of its ${limit} budget`,
+          { durationMs: 4000 },
+        )
+      } else {
+        toast.show(editing ? 'Saved' : isIncome ? 'Income added' : 'Expense added', { durationMs: editing ? 5000 : 2000 })
       }
       onClose()
     } catch (err) {

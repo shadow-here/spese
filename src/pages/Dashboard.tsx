@@ -5,11 +5,15 @@ import { EmptyState } from '../app/EmptyState'
 import { Button, Card, Select } from '../components/ui'
 import { db } from '../db/db'
 import { summarizeCycle } from '../domain/balance'
+import { budgetRows } from '../domain/budgets'
 import { cycleHistory, monthOverMonth, upcomingInNextWeek } from '../domain/history'
 import { refundsByExpense } from '../domain/refunds'
 import type { PayCycle, Transaction } from '../domain/types'
 import { BackupReminder } from '../features/backup/BackupReminder'
 import { BalanceCard } from '../features/dashboard/BalanceCard'
+import { AlertsBanner } from '../features/dashboard/AlertsBanner'
+import { BudgetsCard } from '../features/dashboard/BudgetsCard'
+import { GoalCard } from '../features/dashboard/GoalCard'
 import { OutflowBar } from '../features/dashboard/OutflowBar'
 import { StatTiles } from '../features/dashboard/StatTiles'
 import { UpcomingCard } from '../features/dashboard/UpcomingCard'
@@ -88,6 +92,7 @@ export function DashboardPage({
   )
   const finished = history?.filter((h) => h.savingsRate !== undefined) ?? []
   const mom = history && history.length >= 2 ? monthOverMonth(history, today) : undefined
+  const user = useLiveQuery(() => db.users.get('me'), [])
   const upcoming = useMemo(
     () => (fresh && isCurrent ? upcomingInNextWeek(fresh.fixedExpenses, fresh.transactions, today) : []),
     [fresh, isCurrent, today],
@@ -96,6 +101,7 @@ export function DashboardPage({
   // A past cycle is viewed as of its last day.
   const asOf = isCurrent ? today : minDate(today, cycle.end)
   const summary = useMemo(() => (fresh ? summarizeCycle({ cycle, today: asOf, ...fresh }) : undefined), [fresh, cycle, asOf])
+  const budgets = useMemo(() => (summary && fresh ? budgetRows(summary, fresh.categories) : []), [summary, fresh])
   const catById = useMemo(() => new Map(fresh?.categories.map((c) => [c.id, c])), [fresh])
   const refunds = useMemo(
     () => (fresh ? refundsByExpense(fresh.allRefunds, new Map(fresh.transactions.map((t) => [t.id, t]))) : new Map()),
@@ -120,8 +126,13 @@ export function DashboardPage({
       {isCurrent && !cycle.salaryConfirmed && <SalaryConfirm cycle={cycle} />}
       {isCurrent && <BackupReminder />}
       <BalanceCard summary={summary} isCurrent={isCurrent} />
-      {isCurrent && <StatTiles summary={summary} lastFinished={finished.at(-1)} historyLoaded={history !== undefined} />}
+      {isCurrent && <AlertsBanner summary={summary} budgets={budgets} />}
+      {isCurrent && (
+        <StatTiles summary={summary} lastFinished={finished.at(-1)} historyLoaded={history !== undefined} savingsGoal={user?.savingsGoal} />
+      )}
+      {isCurrent && user?.savingsGoal !== undefined && <GoalCard summary={summary} goal={user.savingsGoal} />}
       {isCurrent && <UpcomingCard items={upcoming} today={today} categories={fresh.categories} />}
+      <BudgetsCard rows={budgets} />
 
       {summary.isEmpty ? (
         <EmptyState

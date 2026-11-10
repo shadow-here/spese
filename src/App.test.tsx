@@ -163,6 +163,35 @@ describe('expenses', () => {
     expect(within(recent).queryByText(/Rahul/)).not.toBeInTheDocument()
   })
 
+  it('warns when an expense takes a category past 80% and then 100% of its budget', async () => {
+    await db.categories.update('food', { monthlyLimit: 100000 }) // ₹1,000
+    render(<App />)
+    await screen.findByText('₹50,000.00')
+
+    await addViaSheet('850', 'Food')
+    expect(await screen.findByText('Food is at 85% of its ₹1,000 budget')).toBeInTheDocument()
+    const alerts = await screen.findByRole('region', { name: 'Alerts' })
+    expect(alerts).toHaveTextContent('Nearly at budget (80%+): Food')
+    const budgets = (await screen.findByRole('heading', { name: 'Budgets' })).closest('section')!
+    expect(budgets).toHaveTextContent('85% used')
+    expect(budgets).toHaveTextContent('₹850 of ₹1,000')
+
+    await addViaSheet('200', 'Food')
+    expect(await screen.findByText('Food is over its ₹1,000 budget')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Alerts' })).toHaveTextContent('Over budget: Food'))
+    expect((await screen.findByRole('heading', { name: 'Budgets' })).closest('section')!).toHaveTextContent('Over by ₹50')
+  })
+
+  it('a savings goal is set aside from safe to spend and shown on the dashboard', async () => {
+    await db.users.update('me', { savingsGoal: 1000000 }) // ₹10,000
+    render(<App />)
+    const goal = (await screen.findByRole('heading', { name: 'Savings goal' })).closest('section')!
+    expect(goal).toHaveTextContent('On track')
+    expect(goal).toHaveTextContent('₹40,000 to spend this cycle and still keep it.')
+    const tile = await screen.findByRole('region', { name: 'Safe to spend today' })
+    expect(tile).toHaveTextContent(/goal kept/)
+  })
+
   it('requires an amount', async () => {
     render(<App />)
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })

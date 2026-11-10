@@ -1,4 +1,5 @@
 import type { CycleSummary } from '../../domain/balance'
+import { goalMet } from '../../domain/budgets'
 import { fixedShare, safeToSpendToday, type CycleHistoryEntry } from '../../domain/history'
 import { cn } from '../../lib/cn'
 import { formatPaise } from '../../lib/money'
@@ -8,27 +9,46 @@ export function StatTiles({
   summary,
   lastFinished,
   historyLoaded,
+  savingsGoal,
 }: {
   summary: CycleSummary
   lastFinished?: CycleHistoryEntry
   /** False while past cycles load — the savings tile waits instead of flashing "after your first cycle". */
   historyLoaded: boolean
+  /** With a goal, safe to spend keeps it aside and the savings tile says whether it was met. */
+  savingsGoal?: number
 }) {
-  const safe = safeToSpendToday(summary)
+  const safe = safeToSpendToday(summary, savingsGoal)
   const over = summary.freeToSpend < 0
+  const eatingGoal = !over && savingsGoal !== undefined && summary.freeToSpend < savingsGoal
+  const lastSub = lastFinished
+    ? savingsGoal !== undefined
+      ? goalMet(lastFinished.summary.remaining, savingsGoal)
+        ? 'goal met'
+        : `${formatPaise(savingsGoal - lastFinished.summary.remaining, { decimals: 'never' })} short of goal`
+      : `${Math.round(lastFinished.savingsRate ?? 0)}% of income`
+    : historyLoaded
+      ? 'after your first cycle'
+      : ' '
   return (
     <div className="grid grid-cols-3 gap-2">
       <Tile
         label="Safe to spend today"
         value={formatPaise(safe, { decimals: 'never' })}
-        sub={over ? 'over budget' : `for ${summary.daysLeft} ${summary.daysLeft === 1 ? 'day' : 'days'}`}
+        sub={
+          over
+            ? 'overspent'
+            : eatingGoal
+              ? 'spending into your goal'
+              : `for ${summary.daysLeft} ${summary.daysLeft === 1 ? 'day' : 'days'}${savingsGoal !== undefined ? ', goal kept' : ''}`
+        }
         tone={over ? 'negative' : undefined}
       />
       <Tile label="Fixed costs" value={`${Math.round(fixedShare(summary))}%`} sub="of income" />
       <Tile
         label="Saved last cycle"
         value={lastFinished ? formatPaise(lastFinished.summary.remaining, { decimals: 'never' }) : '—'}
-        sub={lastFinished ? `${Math.round(lastFinished.savingsRate ?? 0)}% of income` : historyLoaded ? 'after your first cycle' : ' '}
+        sub={lastSub}
         tone={lastFinished && lastFinished.summary.remaining < 0 ? 'negative' : undefined}
       />
     </div>
