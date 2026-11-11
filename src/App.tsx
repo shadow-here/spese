@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { LockScreen, PrivacyShield } from './app/LockScreen'
+import { useAppLock } from './app/useAppLock'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AppShell } from './app/AppShell'
 import { UpdatePrompt } from './app/UpdatePrompt'
@@ -63,8 +65,25 @@ function Boot() {
     case 'needs-onboarding':
       return <OnboardingPage today={today} onDone={rerun} />
     case 'ready':
-      return <MainApp cycleId={boot.cycleId} today={today} />
+      return (
+        <LockGate>
+          <MainApp cycleId={boot.cycleId} today={today} />
+        </LockGate>
+      )
   }
+}
+
+/** App lock (PRD #27): while locked, the app behind isn't rendered at all — only the lock screen. */
+function LockGate({ children }: { children: ReactNode }) {
+  const { lock, locked, shielded, unlock } = useAppLock()
+  if (lock === undefined) return null // lock setting still loading: show nothing rather than flash data
+  if (lock && locked) return <LockScreen lock={lock} onUnlock={unlock} />
+  return (
+    <>
+      {children}
+      {shielded && <PrivacyShield />}
+    </>
+  )
 }
 
 type SheetState = { open: false } | { open: true; editing?: Transaction }

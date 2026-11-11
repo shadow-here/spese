@@ -12,6 +12,7 @@ import { db } from '../db/db'
 import { nextPayDateAfter } from '../domain/cycle'
 import type { Category, PayCycle } from '../domain/types'
 import { CategorySheet } from '../features/categories/CategorySheet'
+import { AppLockCard } from '../features/lock/AppLockCard'
 import { RestoreFromFile } from '../features/backup/RestoreFromFile'
 import { useExportBackup } from '../features/backup/useBackup'
 import { addDays, maxDate, minDate, todayISO, type ISODate } from '../lib/date'
@@ -53,6 +54,7 @@ export function SettingsPage({ today }: { today: ISODate }) {
 
       <CategoriesCard />
       <BackupCard lastBackupAt={user.lastBackupAt} />
+      <AppLockCard />
       <InstallCard />
       <DangerCard />
       <p className="px-1 text-center text-label text-text-secondary">No account, no server — your data never leaves this device unless you export it.</p>

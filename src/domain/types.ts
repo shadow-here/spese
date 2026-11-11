@@ -19,6 +19,21 @@ export interface User {
   lastBackupAt?: number
   /** Savings goal per cycle (FR-5.3): the amount to have left when each cycle ends. */
   savingsGoal?: Paise
+  /** App lock (PRD #27). Never included in backups, so a backup is the way back in if the PIN is forgotten. */
+  lock?: AppLock
+  /** Reminders (PRD #23/#24): the time chosen; the push subscription lives on the push server. */
+  reminder?: { time: string; endpoint: string }
+}
+
+export interface AppLock {
+  /** PBKDF2-SHA-256 of the PIN (base64url), its salt and iteration count. */
+  pinHash: string
+  salt: string
+  iterations: number
+  /** Digits in the PIN, so the lock screen can unlock as soon as the last digit is typed. */
+  pinLength: number
+  /** WebAuthn credential id for Face ID / fingerprint, when turned on. */
+  credentialId?: string
 }
 
 export type CycleStatus = 'open' | 'closed'

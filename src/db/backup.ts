@@ -32,7 +32,9 @@ export class BackupError extends Error {}
 export async function createBackup(database: TrackerDB = defaultDb, now = Date.now()): Promise<Backup> {
   return database.transaction('r', [database.users, database.cycles, database.transactions, database.fixedExpenses, database.categories], async () => {
     const [users, cycles, transactions, fixedExpenses, categories] = await Promise.all([
-      database.users.toArray().then((us) => us.map((u) => ({ ...u, lastBackupAt: now }))),
+      // The app lock and push subscription are device-specific: left out, so restoring a backup
+      // also gets you back in if you've forgotten your PIN.
+      database.users.toArray().then((us) => us.map(({ lock: _lock, reminder: _reminder, ...u }) => ({ ...u, lastBackupAt: now }))),
       database.cycles.toArray(),
       database.transactions.toArray(),
       database.fixedExpenses.toArray(),
