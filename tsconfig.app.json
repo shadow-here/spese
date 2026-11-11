@@ -19,5 +19,7 @@
     "noUncheckedIndexedAccess": true,
     "types": ["vite/client", "vite-plugin-pwa/client", "vite-plugin-pwa/react", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The service worker has its own config (WebWorker types instead of DOM).
+  "exclude": ["src/sw.ts"]
 }

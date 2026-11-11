@@ -13,6 +13,11 @@ export default defineConfig({
       // update never reloads the page mid-entry. Registration happens in code, not an injected script.
       registerType: 'prompt',
       injectRegister: false,
+      // Our own service worker (src/sw.ts) so it can handle reminder pushes; Workbox still
+      // injects the precache list into it.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['icon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Spese',
@@ -30,7 +35,7 @@ export default defineConfig({
           { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Only precache the Latin Inter subsets (₹ is in latin-ext); others load on demand.
         globIgnores: ['**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2'],

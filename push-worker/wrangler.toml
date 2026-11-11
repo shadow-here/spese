@@ -1,0 +1,23 @@
+# Spese push server — Cloudflare Worker. Setup: docs/PUSH.md
+name = "spese-push"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+# Send due reminders every 5 minutes (free plan allows this).
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Subscriptions: one small record per phone (push address, time, timezone, last-sent date).
+# Replace the id with the one `npx wrangler kv namespace create SUBSCRIBERS` prints.
+[[kv_namespaces]]
+binding = "SUBSCRIBERS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+# Only this site may call the server.
+ALLOWED_ORIGIN = "https://spese-lake.vercel.app"
+# Contact the push services see. The app's URL keeps your email out of it.
+VAPID_SUBJECT = "https://spese-lake.vercel.app"
+# Paste the PUBLIC key printed by `node scripts/generate-vapid.mjs`.
+VAPID_PUBLIC_KEY = "REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY"
+# VAPID_PRIVATE_JWK is a secret: `npx wrangler secret put VAPID_PRIVATE_JWK` (never put it here).

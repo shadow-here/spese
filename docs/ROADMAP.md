@@ -85,7 +85,11 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
 - **Search and filter** transactions: text, category, payment method, date range.
 - **Export** to CSV (all data, for spreadsheets) and a one-cycle PDF summary.
 
-## Phase 7 — Lock and reminders (PRD #23, #24, #27) — needs decisions
+## Phase 7 — Lock and reminders (PRD #23, #24, #27) — ✅ built 11 Nov 2026 (push server deploy: docs/PUSH.md)
+
+Decided 11 Nov 2026: PIN + Face ID / fingerprint; auto-lock after 1 minute away; reminders
+via a tiny push server that stores only the push address, time and timezone (the phone writes
+the message from its own data).
 
 - **App lock:** PIN, plus Face ID / fingerprint where the browser supports it. Note: in a web
   app this is a privacy screen, not encryption of the stored data.

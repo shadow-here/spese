@@ -91,6 +91,13 @@ describe('settings', () => {
     await waitFor(async () => expect((await db.users.get('me'))!.savingsGoal).toBe(1000000))
   })
 
+  it('explains reminders need the push server until it is configured', async () => {
+    render(<App />)
+    const card = (await screen.findByRole('heading', { name: 'Reminders' })).closest('section')!
+    expect(card).toHaveTextContent('need the Spese push server')
+    expect(within(card).queryByRole('button', { name: 'Turn on reminders' })).not.toBeInTheDocument()
+  })
+
   it('renames Other but offers no Remove for it', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Categories' })
