@@ -19,6 +19,8 @@ export interface User {
   lastBackupAt?: number
   /** Savings goal per cycle (FR-5.3): the amount to have left when each cycle ends. */
   savingsGoal?: Paise
+  /** Cover the screen when Spese leaves the foreground, so the app switcher shows no numbers. Undefined = on. */
+  hideInSwitcher?: boolean
   /** App lock (PRD #27). Never included in backups, so a backup is the way back in if the PIN is forgotten. */
   lock?: AppLock
   /** Reminders (PRD #23/#24): the time chosen; the push subscription lives on the push server. */

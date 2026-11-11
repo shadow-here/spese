@@ -6,12 +6,14 @@ export function Switch({
   onChange,
   label,
   className,
+  disabled,
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
   /** Accessible name, e.g. "Active: WiFi". */
   label: string
   className?: string
+  disabled?: boolean
 }) {
   return (
     <button
@@ -19,12 +21,13 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={(e) => {
         e.stopPropagation()
         onChange(!checked)
       }}
       className={cn(
-        'relative inline-flex h-5 w-8 shrink-0 items-center rounded-full border transition-quick',
+        'relative inline-flex h-5 w-8 shrink-0 items-center rounded-full border transition-quick disabled:opacity-50',
         checked ? 'border-accent bg-accent' : 'border-border bg-surface-hover',
         className,
       )}

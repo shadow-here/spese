@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import type { AppLock } from '../domain/types'
+import { isStandalone } from '../lib/platform'
 
 /** Lock again after the app has been in the background this long (decided 11 Nov 2026). */
 export const AUTO_LOCK_MS = 60_000
@@ -10,7 +11,7 @@ export interface AppLockState {
   /** undefined while loading; null when the lock is off. */
   lock: AppLock | null | undefined
   locked: boolean
-  /** True while the app is in the background: covers the screen so the app switcher shows no numbers. */
+  /** True while the app is leaving / in the background (and "Hide in app switcher" is on): covers the screen. */
   shielded: boolean
   unlock: () => void
 }
@@ -43,10 +44,29 @@ export function useAppLock(now: () => number = Date.now): AppLockState {
         hiddenAt.current = undefined
       }
     }
+    // The app switcher snapshots the screen the moment you swipe up — often before
+    // "visibilitychange" arrives. Losing focus comes earlier, so cover on that too. Only on
+    // phones / the installed app: on a desktop, clicking another window shouldn't blank Spese.
+    const earlyCover = isStandalone() || window.matchMedia?.('(pointer: coarse)').matches
+    const onBlur = () => earlyCover && setShielded(true)
+    const onFocus = () => document.visibilityState === 'visible' && setShielded(false)
+    const onPageHide = () => setShielded(true)
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    window.addEventListener('blur', onBlur)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('pagehide', onPageHide)
+    window.addEventListener('pageshow', onFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('blur', onBlur)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('pageshow', onFocus)
+    }
   }, [lock, now])
 
+  // "Hide in app switcher" is on unless turned off — and always on with the app lock.
+  const hideInSwitcher = Boolean(lock) || user?.hideInSwitcher !== false
   const unlock = useCallback(() => setLocked(false), [])
-  return { lock, locked: lock ? (locked ?? true) : false, shielded: Boolean(lock) && shielded, unlock }
+  return { lock, locked: lock ? (locked ?? true) : false, shielded: hideInSwitcher && shielded, unlock }
 }

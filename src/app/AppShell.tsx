@@ -17,7 +17,7 @@ interface AppShellProps {
  */
 export function AppShell({ route, onNavigate, onAdd, title, children }: AppShellProps) {
   return (
-    <div className="flex min-h-full">
+    <div className="flex min-h-lvh">
       <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r border-border bg-surface md:flex print:hidden">
         <div className="flex h-12 items-center px-4 text-body font-semibold tracking-[-0.01em]">Spese</div>
         <div className="px-3 pb-3">
@@ -56,8 +56,13 @@ export function AppShell({ route, onNavigate, onAdd, title, children }: AppShell
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-12 items-center border-b border-border bg-bg/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-8 print:hidden">
-          <h1 className="text-title">{title}</h1>
+        {/* The header grows by the status-bar height (safe area) and the 48px title row sits below it.
+            A fixed h-12 plus ~59px of iPhone safe-area padding pushed the title out of the box,
+            where Safari drew it under the header's backdrop blur. */}
+        <header className="sticky top-0 z-10 border-b border-border bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur print:hidden">
+          <div className="flex h-12 items-center px-4 md:px-8">
+            <h1 className="text-title">{title}</h1>
+          </div>
         </header>
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-4 pb-28 md:px-8 md:py-6 md:pb-8 print:max-w-none print:p-0">{children}</main>
       </div>

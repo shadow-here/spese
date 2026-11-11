@@ -75,6 +75,13 @@
   #root {
     height: 100%;
   }
+  /* iPhone home-screen app: a page shorter than the screen was measured without the bottom
+     safe area, leaving a gap under the fixed tab bar on short pages (Transactions, Fixed).
+     Always filling the large viewport (the whole screen) keeps the bar on the true bottom. */
+  body,
+  #root {
+    min-height: 100lvh;
+  }
   body {
     background: var(--bg);
     color: var(--text-primary);

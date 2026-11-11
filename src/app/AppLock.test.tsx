@@ -82,6 +82,26 @@ describe('app lock', () => {
     vi.restoreAllMocks()
   })
 
+  it('covers the screen when the app leaves the foreground, even without the lock, unless turned off', async () => {
+    render(<App />)
+    await screen.findByText('₹50,000.00')
+    const shield = () => document.querySelector('.z-\\[79\\]')
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'))
+    })
+    expect(shield()).not.toBeNull()
+    setVisibility('visible')
+    expect(shield()).toBeNull()
+
+    await db.users.update('me', { hideInSwitcher: false })
+    await waitFor(() => {
+      setVisibility('hidden')
+      expect(shield()).toBeNull()
+    })
+    setVisibility('visible')
+  })
+
   it('turns on from Settings without locking you out on the spot', async () => {
     window.location.hash = '#/settings'
     render(<App />)

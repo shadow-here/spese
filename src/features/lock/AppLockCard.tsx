@@ -45,6 +45,21 @@ export function AppLockCard() {
           <span className="text-label">It hides the app; the data on this phone isn’t encrypted.</span>
         </p>
 
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex flex-col">
+            <span className="text-body">Hide in app switcher</span>
+            <span className="text-label text-text-secondary">
+              {lock ? 'Always on while the app lock is on.' : 'Covers your numbers when you leave Spese.'}
+            </span>
+          </span>
+          <Switch
+            checked={Boolean(lock) || user.hideInSwitcher !== false}
+            onChange={(on) => void (lock ? undefined : db.users.update('me', { hideInSwitcher: on }))}
+            label="Hide Spese's screen in the app switcher"
+            disabled={Boolean(lock)}
+          />
+        </div>
+
         {lock && canBio && (
           <div className="flex items-center justify-between gap-3">
             <span className="text-body">Face ID / fingerprint</span>
