@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 760" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <!-- Each mark is drawn on a 512 canvas with the app background, full-bleed (iOS/Android round the corners). -->
+
+    <!-- A · Balance ring: what's left of the cycle, as a ring that empties as you spend -->
+    <symbol id="ring" viewBox="0 0 512 512">
+      <rect width="512" height="512" fill="#08090A"/>
+      <circle cx="256" cy="256" r="150" fill="none" stroke="#24262B" stroke-width="48"/>
+      <circle cx="256" cy="256" r="150" fill="none" stroke="#5E6AD2" stroke-width="48" stroke-linecap="round"
+              stroke-dasharray="640 1000" transform="rotate(-90 256 256)"/>
+    </symbol>
+
+    <!-- B · S monogram: a single continuous stroke, like money flowing in and out -->
+    <symbol id="s" viewBox="0 0 512 512">
+      <rect width="512" height="512" fill="#08090A"/>
+      <path d="M 326 136 A 80 80 0 1 0 256 256 A 80 80 0 1 1 186 376" fill="none" stroke="#5E6AD2" stroke-width="52" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- C · Pocket bar: a card with the remaining-balance bar from the dashboard -->
+    <symbol id="card" viewBox="0 0 512 512">
+      <rect width="512" height="512" fill="#08090A"/>
+      <rect x="108" y="146" width="296" height="220" rx="40" fill="none" stroke="#F7F8F8" stroke-width="26"/>
+      <rect x="156" y="204" width="96" height="22" rx="11" fill="#62666D"/>
+      <rect x="156" y="286" width="200" height="26" rx="13" fill="#24262B"/>
+      <rect x="156" y="286" width="128" height="26" rx="13" fill="#5E6AD2"/>
+    </symbol>
+
+    <!-- iOS-style squircle-ish mask for the preview only -->
+    <clipPath id="big"><rect width="200" height="200" rx="44"/></clipPath>
+    <clipPath id="mid"><rect width="60" height="60" rx="13"/></clipPath>
+    <clipPath id="small"><rect width="29" height="29" rx="7"/></clipPath>
+  </defs>
+
+  <rect width="1200" height="760" fill="#0F1011"/>
+  <text x="60" y="70" fill="#F7F8F8" font-size="28" font-weight="600">Spese — logo options</text>
+  <text x="60" y="104" fill="#8A8F98" font-size="16">Home-screen size, then app-switcher and Settings sizes. On a dark and a light wallpaper.</text>
+
+  <!-- column template: x offsets 60, 440, 820 -->
+  <g transform="translate(60 150)">
+    <g clip-path="url(#big)"><use href="#ring" width="200" height="200"/></g>
+    <g transform="translate(230 70)" clip-path="url(#mid)"><use href="#ring" width="60" height="60"/></g>
+    <g transform="translate(310 85)" clip-path="url(#small)"><use href="#ring" width="29" height="29"/></g>
+    <text x="0" y="240" fill="#F7F8F8" font-size="20" font-weight="600">A · Balance ring</text>
+    <text x="0" y="268" fill="#8A8F98" font-size="15">What's left this cycle, as a ring</text>
+    <text x="0" y="290" fill="#8A8F98" font-size="15">that empties as you spend.</text>
+  </g>
+
+  <g transform="translate(440 150)">
+    <g clip-path="url(#big)"><use href="#s" width="200" height="200"/></g>
+    <g transform="translate(230 70)" clip-path="url(#mid)"><use href="#s" width="60" height="60"/></g>
+    <g transform="translate(310 85)" clip-path="url(#small)"><use href="#s" width="29" height="29"/></g>
+    <text x="0" y="240" fill="#F7F8F8" font-size="20" font-weight="600">B · S monogram</text>
+    <text x="0" y="268" fill="#8A8F98" font-size="15">One continuous stroke — money</text>
+    <text x="0" y="290" fill="#8A8F98" font-size="15">flowing in and out. Reads as Spese.</text>
+  </g>
+
+  <g transform="translate(820 150)">
+    <g clip-path="url(#big)"><use href="#card" width="200" height="200"/></g>
+    <g transform="translate(230 70)" clip-path="url(#mid)"><use href="#card" width="60" height="60"/></g>
+    <g transform="translate(310 85)" clip-path="url(#small)"><use href="#card" width="29" height="29"/></g>
+    <text x="0" y="240" fill="#F7F8F8" font-size="20" font-weight="600">C · Pocket bar</text>
+    <text x="0" y="268" fill="#8A8F98" font-size="15">A card with the dashboard's</text>
+    <text x="0" y="290" fill="#8A8F98" font-size="15">remaining-balance bar.</text>
+  </g>
+
+  <!-- light wallpaper strip -->
+  <rect x="60" y="500" width="1080" height="200" rx="16" fill="#D9DCE1"/>
+  <text x="84" y="530" fill="#3A3D42" font-size="14">On a light wallpaper</text>
+  <g transform="translate(160 560)">
+    <g clip-path="url(#mid)"><use href="#ring" width="60" height="60"/></g>
+    <text x="30" y="84" fill="#1F2125" font-size="13" text-anchor="middle">Spese</text>
+  </g>
+  <g transform="translate(540 560)">
+    <g clip-path="url(#mid)"><use href="#s" width="60" height="60"/></g>
+    <text x="30" y="84" fill="#1F2125" font-size="13" text-anchor="middle">Spese</text>
+  </g>
+  <g transform="translate(920 560)">
+    <g clip-path="url(#mid)"><use href="#card" width="60" height="60"/></g>
+    <text x="30" y="84" fill="#1F2125" font-size="13" text-anchor="middle">Spese</text>
+  </g>
+</svg>
