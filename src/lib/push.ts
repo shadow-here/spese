@@ -1,6 +1,7 @@
 import { db } from '../db/db'
 import { isIOS, isStandalone } from './platform'
 import { fromBase64Url } from './pin'
+import { allowSystemUi } from './systemUi'
 
 /**
  * Daily reminders (v1.1 Phase 7, PRD #23/#24) — the phone side. Talks to the Spese push server
@@ -42,6 +43,7 @@ async function currentSubscription(): Promise<PushSubscription | null> {
 
 /** Ask permission, subscribe this phone, and register the time with the server. */
 export async function enableReminders(time: string): Promise<void> {
+  allowSystemUi() // the permission prompt isn't "leaving Spese"
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('Notifications weren’t allowed')
   const reg = await navigator.serviceWorker.ready

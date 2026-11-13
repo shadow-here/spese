@@ -58,7 +58,7 @@ That's the whole idea. Everything else explains how you got there.
 
 ### Yours, and only yours
 
-- **App lock** with a PIN or **Face ID / fingerprint**. Locks when you leave for more than a minute — so hopping to your UPI app and back doesn't nag you.
+- **App lock** with a PIN or **Face ID / fingerprint**. Locks the instant you leave — and whatever you were typing is still there when you unlock.
 - **Hidden in the app switcher**, so your balance never shows up on a shared screen.
 - **Daily reminders** (optional) — "Rent ₹15,000 deducted today" or a nudge to log what you spent. Written *on your phone*, from your own data.
 

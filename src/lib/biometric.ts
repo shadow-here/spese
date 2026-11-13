@@ -1,4 +1,5 @@
 import { fromBase64Url, toBase64Url } from './pin'
+import { allowSystemUi } from './systemUi'
 
 /**
  * Face ID / fingerprint unlock via WebAuthn with the device's own (platform) authenticator.
@@ -19,6 +20,7 @@ export async function biometricAvailable(): Promise<boolean> {
 
 /** Creates a device credential (prompts Face ID / fingerprint). Returns its id, or throws if cancelled. */
 export async function registerBiometric(): Promise<string> {
+  allowSystemUi()
   const credential = (await navigator.credentials.create({
     publicKey: {
       rp: { name: 'Spese' },
@@ -39,6 +41,7 @@ export async function registerBiometric(): Promise<string> {
 
 /** Asks for Face ID / fingerprint against the saved credential. Resolves true only on success. */
 export async function verifyBiometric(credentialId: string): Promise<boolean> {
+  allowSystemUi()
   try {
     const result = await navigator.credentials.get({
       publicKey: {

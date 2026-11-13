@@ -87,7 +87,8 @@ Example: you paid ₹1,800 for dinner, a friend sends back ₹600.
 
 ## Phase 7 — Lock and reminders (PRD #23, #24, #27) — ✅ built 11 Nov 2026 (push server deploy: docs/PUSH.md)
 
-Decided 11 Nov 2026: PIN + Face ID / fingerprint; auto-lock after 1 minute away; reminders
+Decided 11 Nov 2026: PIN + Face ID / fingerprint; auto-lock after 1 minute away (changed
+13 Nov 2026 to lock instantly on leaving, except for system screens Spese opens itself); reminders
 via a tiny push server that stores only the push address, time and timezone (the phone writes
 the message from its own data).
 

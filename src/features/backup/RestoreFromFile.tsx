@@ -3,6 +3,7 @@ import { Button } from '../../components/ui'
 import { parseBackup, restoreBackup, type Backup } from '../../db/backup'
 import { todayISO } from '../../lib/date'
 import { formatDate } from '../../lib/format'
+import { allowSystemUi } from '../../lib/systemUi'
 
 /**
  * "Restore from backup" button + file picker + validation error + confirm step.
@@ -53,7 +54,14 @@ export function RestoreFromFile({
   const from = pending && formatDate(todayISO(new Date(pending.exportedAt)), true)
   return (
     <>
-      <Button size={size} onClick={() => fileRef.current?.click()} className={size === 'lg' ? 'w-full' : undefined}>
+      <Button
+        size={size}
+        onClick={() => {
+          allowSystemUi() // the file picker isn't "leaving Spese"
+          fileRef.current?.click()
+        }}
+        className={size === 'lg' ? 'w-full' : undefined}
+      >
         {label}
       </Button>
       <input

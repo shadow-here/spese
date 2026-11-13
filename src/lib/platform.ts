@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { allowSystemUi } from './systemUi'
 
 /** Save a text file: share sheet on phones (iOS home-screen apps can't download), download elsewhere. */
 export async function saveTextFile(filename: string, text: string, mime = 'application/json'): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  allowSystemUi() // share sheet / download prompt isn't "leaving Spese"
   const file = new File([text], filename, { type: mime })
   const coarse = window.matchMedia?.('(pointer: coarse)').matches
   if (coarse && navigator.canShare?.({ files: [file] })) {

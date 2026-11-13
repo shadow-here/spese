@@ -11,6 +11,7 @@ import { netAmount, refundsByExpense } from '../domain/refunds'
 import { minDate, type ISODate } from '../lib/date'
 import { formatDate, formatRange } from '../lib/format'
 import { formatPaise } from '../lib/money'
+import { allowSystemUi } from '../lib/systemUi'
 
 const money = (p: number) => formatPaise(p, { decimals: 'auto' })
 /** Money out, with a minus — but plain "₹0" when there's nothing (no "−₹0"). */
@@ -54,7 +55,13 @@ export function ReportPage({ cycleId, today, onBack }: { cycleId?: string; today
           <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
           Back
         </Button>
-        <Button variant="primary" onClick={() => window.print()}>
+        <Button
+          variant="primary"
+          onClick={() => {
+            allowSystemUi() // the print sheet isn't "leaving Spese"
+            window.print()
+          }}
+        >
           <Printer size={16} strokeWidth={1.5} aria-hidden="true" />
           Save as PDF
         </Button>

@@ -20,6 +20,7 @@ export function useHotkey(key: string, handler: () => void, enabled = true) {
   useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!enabledRef.current || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return
+      if (document.documentElement.hasAttribute('data-locked')) return // the lock screen owns the keyboard
       if (e.key.toLowerCase() === key.toLowerCase()) {
         e.preventDefault()
         handlerRef.current()

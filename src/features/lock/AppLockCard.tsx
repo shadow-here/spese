@@ -40,8 +40,8 @@ export function AppLockCard() {
       <div className="flex flex-col gap-3 p-4">
         <p className="text-body text-text-secondary">
           {lock
-            ? 'On — Spese asks for your PIN when you open it, and after a minute away.'
-            : 'Ask for a PIN when Spese opens and after a minute away.'}{' '}
+            ? 'On — Spese locks the moment you leave it, and asks for your PIN when you’re back.'
+            : 'Lock Spese the moment you leave it, and ask for a PIN to get back in.'}{' '}
           <span className="text-label">It hides the app; the data on this phone isn’t encrypted.</span>
         </p>
 

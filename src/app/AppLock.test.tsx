@@ -5,6 +5,7 @@ import { onboard } from '../db/cycles'
 import { db } from '../db/db'
 import { enableLock } from '../db/lock'
 import { todayISO } from '../lib/date'
+import { allowSystemUi } from '../lib/systemUi'
 
 beforeEach(async () => {
   window.location.hash = ''
@@ -60,26 +61,47 @@ describe('app lock', () => {
     expect(screen.getByRole('button', { name: '1' })).toBeDisabled()
   })
 
-  it('locks again only after more than a minute away, and hides the screen while away', async () => {
+  it('locks the instant you leave, keeping what you were doing underneath', async () => {
     await enableLock('2580', db, 1000)
-    let now = 1_000_000
-    vi.spyOn(Date, 'now').mockImplementation(() => now)
     render(<App />)
     await screen.findByRole('dialog', { name: 'Spese is locked' })
     typePin('2580')
     await screen.findByText('₹50,000.00')
 
+    // Start typing an expense, then leave.
+    fireEvent.keyDown(document, { key: 'n' })
+    const sheet = await screen.findByRole('dialog', { name: 'New expense' })
+    fireEvent.change(within(sheet).getByLabelText('Amount'), { target: { value: '240' } })
     setVisibility('hidden')
     expect(document.querySelector('.z-\\[79\\]')).not.toBeNull() // privacy shield covers the app
-    now += 30_000 // quick trip to a UPI app
+    setVisibility('visible')
+    expect(await screen.findByRole('dialog', { name: 'Spese is locked' })).toBeInTheDocument()
+
+    // Behind the lock, the app is inert and its keys are muted.
+    expect(sheet.closest('[inert]')).not.toBeNull()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    typePin('2580')
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Spese is locked' })).not.toBeInTheDocument())
+    // The half-typed expense is still there.
+    expect(within(screen.getByRole('dialog', { name: 'New expense' })).getByLabelText('Amount')).toHaveValue('240')
+  })
+
+  it('does not lock for system screens Spese opened itself (file picker, share sheet…)', async () => {
+    await enableLock('2580', db, 1000)
+    render(<App />)
+    await screen.findByRole('dialog', { name: 'Spese is locked' })
+    typePin('2580')
+    await screen.findByText('₹50,000.00')
+
+    allowSystemUi()
+    setVisibility('hidden')
     setVisibility('visible')
     expect(screen.queryByRole('dialog', { name: 'Spese is locked' })).not.toBeInTheDocument()
 
+    // …but only once: leaving for real afterwards still locks.
     setVisibility('hidden')
-    now += 61_000
     setVisibility('visible')
     expect(await screen.findByRole('dialog', { name: 'Spese is locked' })).toBeInTheDocument()
-    vi.restoreAllMocks()
   })
 
   it('covers the screen when the app leaves the foreground, even without the lock, unless turned off', async () => {

@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
+/** Where sheets render: a node inside the app's lockable area (App.tsx LockGate). */
+export const SHEET_ROOT_ID = 'sheet-root'
+
 export interface BottomSheetProps {
   open: boolean
   onClose: () => void
@@ -34,6 +37,8 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
     ;(first ?? panel)?.focus()
 
     const onKey = (e: KeyboardEvent) => {
+      // While the app lock is showing, this sheet is behind it: leave the keys to the lock screen.
+      if (document.documentElement.hasAttribute('data-locked')) return
       if (e.key === 'Escape') {
         e.preventDefault()
         onCloseRef.current()
@@ -99,6 +104,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
         <div className="px-4">{children}</div>
       </div>
     </div>,
-    document.body,
+    // Inside the app's lockable area when there is one (so the app lock makes it inert too).
+    document.getElementById(SHEET_ROOT_ID) ?? document.body,
   )
 }

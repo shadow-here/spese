@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { LockScreen, PrivacyShield } from './app/LockScreen'
+import { SHEET_ROOT_ID } from './components/ui/BottomSheet'
 import { useAppLock } from './app/useAppLock'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AppShell } from './app/AppShell'
@@ -76,11 +77,29 @@ function Boot() {
 /** App lock (PRD #27): while locked, the app behind isn't rendered at all — only the lock screen. */
 function LockGate({ children }: { children: ReactNode }) {
   const { lock, locked, shielded, unlock } = useAppLock()
+  const [everUnlocked, setEverUnlocked] = useState(false)
+  useEffect(() => {
+    if (lock !== undefined && (!lock || !locked)) setEverUnlocked(true)
+  }, [lock, locked])
+  // Page-wide keys (N, /, a sheet's Esc and Tab) check this and stay quiet while locked.
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-locked', Boolean(lock && locked))
+  }, [lock, locked])
+
   if (lock === undefined) return null // lock setting still loading: show nothing rather than flash data
-  if (lock && locked) return <LockScreen lock={lock} onUnlock={unlock} />
+  // Fresh open: nothing is rendered behind the lock screen.
+  if (lock && locked && !everUnlocked) return <LockScreen lock={lock} onUnlock={unlock} />
+  // Locked again after leaving: the app stays mounted underneath — inert and covered — so a
+  // half-typed expense or an open screen is still there when you come back.
+  const relocked = Boolean(lock && locked)
   return (
     <>
-      {children}
+      <div inert={relocked} aria-hidden={relocked || undefined} className="contents">
+        {children}
+        {/* Sheets render here (not on <body>) so they're inert behind the lock too. */}
+        <div id={SHEET_ROOT_ID} />
+      </div>
+      {relocked && lock && <LockScreen lock={lock} onUnlock={unlock} />}
       {shielded && <PrivacyShield />}
     </>
   )
